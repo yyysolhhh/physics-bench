@@ -3,7 +3,7 @@ from typing import Optional
 
 from rich.progress import Progress
 
-from physics_bench.dataset.loader import JsonDatasetLoader
+from physics_bench.dataset.loader import DatasetItem
 from physics_bench.llm.base import BaseLLMClient
 from physics_bench.llm.openai_client import OpenAIClient
 from physics_bench.llm.qwen_client import QwenClient
@@ -31,10 +31,7 @@ class BenchmarkRunner:
         self.model_spec = model_spec
         self.evaluator = ExactMatchEvaluator()
 
-    def run(self, dataset_path: str, limit: Optional[int] = None) -> EvaluationResult:
-        loader = JsonDatasetLoader(dataset_path)
-        items = loader.load(limit=limit)
-
+    def run_with_items(self, items: list[DatasetItem]) -> EvaluationResult:
         llm = _make_llm(self.model_spec)
 
         y_true: list[str] = []
