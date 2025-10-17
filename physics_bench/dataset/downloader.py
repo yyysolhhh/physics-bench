@@ -11,8 +11,9 @@ def download_huggingface_dataset(
         output_file: Optional[str] = None,
         limit: Optional[int] = None
 ) -> None:
+    base_dir = Path("dataset")
+    base_dir.mkdir(parents=True, exist_ok=True)
     if output_file is None:
-        # "user/dataset-name" -> "dataset-name.json"
         dataset_suffix = dataset_name.split("/")[-1] if "/" in dataset_name else dataset_name
         output_file = f"{dataset_suffix}_{split}.json"
     print(f"Hugging Face에서 '{dataset_name}' 다운로드 중...")
@@ -38,6 +39,8 @@ def download_huggingface_dataset(
             items = items[:limit]
     
         output_path = Path(output_file)
+        if not output_path.is_absolute():
+            output_path = base_dir / output_path
         with output_path.open("w", encoding="utf-8") as f:
             json.dump(items, f, ensure_ascii=False, indent=2)
     
