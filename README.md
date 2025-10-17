@@ -25,20 +25,36 @@ QWEN_BASE_URL=
 
 ## 실행 예시
 
+### 1. 데이터셋 다운로드
 ```zsh
-python main.py run
+# Hugging Face에서 데이터셋 다운로드
+python main.py download {데이터셋 이름} {split}
+
+# 출력 파일명 지정 (미지정 시 기본: {데이터셋}_{split}.json)
+python main.py download {데이터셋 이름} test --output saved.json
+
+# 개수 제한
+python main.py download {데이터셋 이름} validation --limit 100
 ```
 
-### 옵션
+**download 명령어 인자/옵션:**
+- `dataset_name` (인자, 필수): Hugging Face 데이터셋 이름
+- `split` (인자, 필수): 다운로드할 split 이름 (예: train/test/validation)
+- `--output` (옵션): 출력 파일명 (미지정 시 `{데이터셋}_{split}.json`)
+- `--limit` (옵션): 다운로드할 항목 수 제한
+
+### 2. 벤치마크 실행
+```zsh
+# 기본 실행
+python main.py run
+
+# 옵션 사용
+python main.py run --dataset downloaded_dataset.json --provider qwen --limit 10
+```
+
+**run 명령어 옵션:**
 - `--dataset`: 데이터셋 경로 (기본값: dataset/dataset.json)
 - `--provider`: 모델 제공자 (기본값: qwen, 선택: openai, qwen)
 - `--limit`: 상위 N개로 제한 (선택)
 - `--temperature`: 샘플링 온도 (기본값: 0.0)
 - `--max-tokens`: 최대 토큰 (선택)
-
-```zsh
-# 예시
-python main.py run --dataset dataset/dataset.json --provider qwen --limit 10
-```
-
-
