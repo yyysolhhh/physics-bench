@@ -3,10 +3,12 @@ from typing import Optional, override
 from langchain_openai import ChatOpenAI
 
 from .base import BaseLLMClient
+from .registry import register_llm
 from ..prompts import PHYSICS_TUTOR_SYSTEM_PROMPT, PHYSICS_TUTOR_USER_PROMPT
 from ..utils.config import get_env
 
 
+@register_llm("openai", "OPENAI_MODEL")
 class OpenAIClient(BaseLLMClient):
     def __init__(
             self,

@@ -5,10 +5,8 @@ from rich.progress import Progress
 
 from physics_bench.dataset.loader import DatasetItem
 from physics_bench.llm.base import BaseLLMClient
-from physics_bench.llm.openai_client import OpenAIClient
-from physics_bench.llm.qwen_client import QwenClient
+from physics_bench.llm import LLMRegistry
 from .evaluator import ExactMatchEvaluator, EvaluationResult
-from ..llm import AnthropicClient
 
 
 @dataclass(frozen=True)
@@ -20,13 +18,12 @@ class ModelSpec:
 
 
 def _make_llm(spec: ModelSpec) -> BaseLLMClient:
-    if spec.provider.lower() == "openai":
-        return OpenAIClient(model_name=spec.model, temperature=spec.temperature, max_tokens=spec.max_tokens)
-    elif spec.provider.lower() == "qwen":
-        return QwenClient(model_name=spec.model, temperature=spec.temperature, max_tokens=spec.max_tokens)
-    elif spec.provider.lower() == "anthropic":
-        return AnthropicClient(model_name=spec.model, temperature=spec.temperature, max_tokens=spec.max_tokens)
-    raise ValueError(f"지원하지 않는 provider: {spec.provider}")
+    return LLMRegistry.create_client(
+        provider=spec.provider,
+        model_name=spec.model,
+        temperature=spec.temperature,
+        max_tokens=spec.max_tokens
+    )
 
 
 class BenchmarkRunner:

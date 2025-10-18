@@ -5,6 +5,7 @@ from rich import print
 
 from physics_bench.benchmark import BenchmarkRunner, ModelSpec
 from physics_bench.dataset import JsonDatasetLoader, download_huggingface_dataset
+from physics_bench.llm import LLMRegistry
 from physics_bench.utils.config import get_env
 
 app = typer.Typer()
@@ -13,21 +14,17 @@ app = typer.Typer()
 @app.command("run")
 def run(
         dataset: str = typer.Option("dataset/dataset.json", "--dataset", help="JSON 데이터셋 경로"),
-        provider: str = typer.Option("qwen", "--provider", help="모델 제공자 (openai, qwen, anthropic)"),
+        provider: str = typer.Option("qwen", "--provider", help=f"모델 제공자 ({', '.join(LLMRegistry.get_providers())})"),
         temperature: float = typer.Option(0.0, "--temperature", help="샘플링 온도"),
         max_tokens: Optional[int] = typer.Option(None, "--max-tokens", help="최대 토큰(미지정 시 모델 기본값)"),
         limit: Optional[int] = typer.Option(None, "--limit", help="데이터셋 상위 N개로 제한"),
 ):
-    model_mapping = {
-        "openai": get_env("OPENAI_MODEL"),
-        "qwen": get_env("QWEN_MODEL"),
-        "anthropic": get_env("ANTHROPIC_MODEL"),
-    }
+    if provider not in LLMRegistry.get_providers():
+        available = ", ".join(LLMRegistry.get_providers())
+        raise typer.BadParameter(f"지원하지 않는 provider: {provider}. 사용 가능: {available}")
 
-    if provider not in model_mapping:
-        raise typer.BadParameter(f"지원하지 않는 provider: {provider}. 사용 가능: {list(model_mapping.keys())}")
-
-    model_name = model_mapping[provider]
+    model_env_var = LLMRegistry.get_model_env_var(provider)
+    model_name = get_env(model_env_var)
     spec = ModelSpec(provider=provider, model=model_name, temperature=temperature, max_tokens=max_tokens)
 
     loader = JsonDatasetLoader(dataset)

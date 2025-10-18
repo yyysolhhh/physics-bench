@@ -3,10 +3,12 @@ from typing import Optional, override, Any
 from anthropic import Anthropic
 
 from .base import BaseLLMClient
+from .registry import register_llm
 from ..prompts import PHYSICS_TUTOR_SYSTEM_PROMPT, PHYSICS_TUTOR_USER_PROMPT
 from ..utils.config import get_env
 
 
+@register_llm("anthropic", "ANTHROPIC_MODEL")
 class AnthropicClient(BaseLLMClient):
     def __init__(
             self,
