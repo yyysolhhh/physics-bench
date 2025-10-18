@@ -13,7 +13,7 @@ app = typer.Typer()
 @app.command("run")
 def run(
         dataset: str = typer.Option("dataset/dataset.json", "--dataset", help="JSON 데이터셋 경로"),
-        provider: str = typer.Option("qwen", "--provider", help="모델 제공자 (openai, qwen)"),
+        provider: str = typer.Option("qwen", "--provider", help="모델 제공자 (openai, qwen, anthropic)"),
         temperature: float = typer.Option(0.0, "--temperature", help="샘플링 온도"),
         max_tokens: Optional[int] = typer.Option(None, "--max-tokens", help="최대 토큰(미지정 시 모델 기본값)"),
         limit: Optional[int] = typer.Option(None, "--limit", help="데이터셋 상위 N개로 제한"),
@@ -21,6 +21,7 @@ def run(
     model_mapping = {
         "openai": get_env("OPENAI_MODEL"),
         "qwen": get_env("QWEN_MODEL"),
+        "anthropic": get_env("ANTHROPIC_MODEL"),
     }
 
     if provider not in model_mapping:

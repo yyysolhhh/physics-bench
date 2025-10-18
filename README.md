@@ -21,6 +21,10 @@ OPENAI_MODEL=
 QWEN_API_KEY=dummy
 QWEN_MODEL=
 QWEN_BASE_URL=
+
+# Anthropic 설정
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=
 ```
 
 ## 실행 예시
@@ -54,7 +58,7 @@ python main.py run --dataset downloaded_dataset.json --provider qwen --limit 10
 
 **run 명령어 옵션:**
 - `--dataset`: 데이터셋 경로 (기본값: dataset/dataset.json)
-- `--provider`: 모델 제공자 (기본값: qwen, 선택: openai, qwen)
+- `--provider`: 모델 제공자 (기본값: qwen, 선택: openai, qwen, anthropic)
 - `--limit`: 상위 N개로 제한 (선택)
 - `--temperature`: 샘플링 온도 (기본값: 0.0)
 - `--max-tokens`: 최대 토큰 (선택)

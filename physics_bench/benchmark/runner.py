@@ -8,6 +8,7 @@ from physics_bench.llm.base import BaseLLMClient
 from physics_bench.llm.openai_client import OpenAIClient
 from physics_bench.llm.qwen_client import QwenClient
 from .evaluator import ExactMatchEvaluator, EvaluationResult
+from ..llm import AnthropicClient
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,8 @@ def _make_llm(spec: ModelSpec) -> BaseLLMClient:
         return OpenAIClient(model_name=spec.model, temperature=spec.temperature, max_tokens=spec.max_tokens)
     elif spec.provider.lower() == "qwen":
         return QwenClient(model_name=spec.model, temperature=spec.temperature, max_tokens=spec.max_tokens)
+    elif spec.provider.lower() == "anthropic":
+        return AnthropicClient(model_name=spec.model, temperature=spec.temperature, max_tokens=spec.max_tokens)
     raise ValueError(f"지원하지 않는 provider: {spec.provider}")
 
 
@@ -41,6 +44,9 @@ class BenchmarkRunner:
             task = progress.add_task("질의 중...", total=len(items))
             for item in items:
                 answer = llm.generate_answer(question=item.question)
+                print("gt:\n", item.answer)
+                print("answer:\n", answer)
+                print("--------------------------------")
                 y_true.append(item.answer)
                 y_pred.append(answer)
                 progress.advance(task)
