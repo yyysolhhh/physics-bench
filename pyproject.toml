@@ -15,4 +15,5 @@ dependencies = [
     "typer>=0.19.2",
     "datasets>=2.14.0",
     "anthropic>=0.71.0",
+    "google-generativeai>=0.8.0",
 ]
