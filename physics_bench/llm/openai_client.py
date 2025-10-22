@@ -4,7 +4,6 @@ from langchain_openai import ChatOpenAI
 
 from .base import BaseLLMClient
 from .registry import register_llm
-from ..prompts import PHYSICS_TUTOR_SYSTEM_PROMPT, PHYSICS_TUTOR_USER_PROMPT
 from ..utils.config import get_env
 
 
@@ -27,10 +26,10 @@ class OpenAIClient(BaseLLMClient):
         self.llm = ChatOpenAI(**kwargs)
 
     @override
-    def generate_answer(self, question: str) -> str:
+    def generate_answer(self, system_prompt: str, user_prompt: str) -> str:
         messages = [
-            {"role": "system", "content": PHYSICS_TUTOR_SYSTEM_PROMPT},
-            {"role": "user", "content": PHYSICS_TUTOR_USER_PROMPT.format(question=question)}
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
         ]
         response = self.llm.invoke(messages)
         text = response.content if hasattr(response, "content") else str(response)

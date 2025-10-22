@@ -4,7 +4,7 @@ from anthropic import Anthropic
 
 from .base import BaseLLMClient
 from .registry import register_llm
-from ..prompts import PHYSICS_TUTOR_SYSTEM_PROMPT, PHYSICS_TUTOR_USER_PROMPT
+from ..prompts import PHYSICS_TUTOR_SYSTEM_PROMPT, PHYSICS_USER_PROMPT
 from ..utils.config import get_env
 
 
@@ -27,43 +27,18 @@ class AnthropicClient(BaseLLMClient):
         self.max_tokens = max_tokens
 
     @override
-    def generate_answer(self, question: str) -> str:
+    def generate_answer(self, system_prompt: str, user_prompt: str) -> str:
         messages = [
-            {"role": "user", "content": PHYSICS_TUTOR_USER_PROMPT.format(question=question)}
+            {"role": "user", "content": user_prompt}
         ]
 
         kwargs = {
             "model": self.model_name,
             "messages": messages,
-            "system": PHYSICS_TUTOR_SYSTEM_PROMPT,
+            "system": system_prompt,
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens or 4096,  # 기본값 설정
+            "max_tokens": self.max_tokens or 4096,
         }
 
         response = self.client.messages.create(**kwargs)
         return response.content[0].text.strip()
-
-    def generate_answer_with_usage(self, question: str) -> dict[str, Any]:
-        """토큰 사용량 정보와 함께 답변을 생성합니다."""
-        messages = [
-            {"role": "user", "content": PHYSICS_TUTOR_USER_PROMPT.format(question=question)}
-        ]
-
-        kwargs = {
-            "model": self.model_name,
-            "messages": messages,
-            "system": PHYSICS_TUTOR_SYSTEM_PROMPT,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens or 4096,  # 기본값 설정
-        }
-
-        response = self.client.messages.create(**kwargs)
-
-        return {
-            "answer": response.content[0].text.strip(),
-            "usage": {
-                "input_tokens": response.usage.input_tokens,
-                "output_tokens": response.usage.output_tokens,
-                "total_tokens": response.usage.input_tokens + response.usage.output_tokens
-            }
-        }
