@@ -8,12 +8,14 @@ class DatasetItem:
     id: int
     question: str
     answer: str
+    answer_latex: str = ""
+    answer_number: str = ""
     unit: str = ""
     source: str = ""
     problemid: str = ""
 
 
-class JsonDatasetLoader:
+class SciBenchDatasetLoader:
     def __init__(self, path: str | Path):
         self.path = Path(path)
 
@@ -25,23 +27,26 @@ class JsonDatasetLoader:
             item_id = row.get("id")
             problem_text = str(row.get("problem_text", "")).strip()
             answer_number = str(row.get("answer_number", "")).strip()
+            answer_latex = str(row.get("answer_latex", "")).strip()
             unit = str(row.get("unit", "")).strip()
             source = str(row.get("source", "")).strip()
             problemid = str(row.get("problemid", "")).strip()
-            
+
             if not problem_text or not answer_number:
                 continue
-                
+
             # 답변과 단위를 결합
             if unit:
                 answer = f"{answer_number} {unit}"
             else:
                 answer = answer_number
-                
+
             items.append(DatasetItem(
                 id=item_id,
                 question=problem_text,
                 answer=answer,
+                answer_latex=answer_latex,
+                answer_number=answer_number,
                 unit=unit,
                 source=source,
                 problemid=problemid

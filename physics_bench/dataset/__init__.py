@@ -1,4 +1,4 @@
 from .downloader import download_huggingface_dataset
-from .loader import DatasetItem, JsonDatasetLoader
+from .loader import DatasetItem, SciBenchDatasetLoader
 
-__all__ = ["DatasetItem", "JsonDatasetLoader", "download_huggingface_dataset"]
+__all__ = ["DatasetItem", "SciBenchDatasetLoader", "download_huggingface_dataset"]

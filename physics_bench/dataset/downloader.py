@@ -18,7 +18,8 @@ def _default_output_name(dataset_name: str, split: str) -> str:
 
 def _collect_items(dataset_name: str, split: str, limit: Optional[int]) -> List[Dict[str, Any]]:
     try:
-        ds = load_dataset(dataset_name, split=split)
+        # ds = load_dataset(dataset_name, split=split)
+        ds = load_dataset(dataset_name)
     except Exception as e:
         raise ValueError(f"데이터셋 '{dataset_name}' '{split}' 로드 실패: {e}") from e
 
