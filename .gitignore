@@ -1,6 +1,8 @@
 ### data ###
 textbook*
 *.json
+*.jsonl
+dataset/ugphysics
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,pycharm+all,venv,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,pycharm+all,venv,python
