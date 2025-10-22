@@ -4,12 +4,13 @@ import typer
 from rich import print
 
 from physics_bench.benchmark import BenchmarkRunner, ModelSpec
-from physics_bench.dataset import JsonDatasetLoader, download_huggingface_dataset
+from physics_bench.dataset import SciBenchDatasetLoader, download_huggingface_dataset
 from physics_bench.llm import LLMRegistry
 from physics_bench.prompts import (
     PHYSICS_BENCHMARK_PROMPT,
     PHYSICS_SIMPLE_PROMPT,
-    PHYSICS_DETAILED_PROMPT
+    PHYSICS_DETAILED_PROMPT,
+    PHYSICS_NUMERICAL_PROMPT
 )
 from physics_bench.utils.config import get_env
 
@@ -24,7 +25,8 @@ def run(
         max_tokens: Optional[int] = typer.Option(None, "--max-tokens", help="최대 토큰(미지정 시 모델 기본값)"),
         limit: Optional[int] = typer.Option(None, "--limit", help="데이터셋 상위 N개로 제한"),
         verbose: bool = typer.Option(True, "--verbose", "-v", help="상세한 출력 표시"),
-        prompt_style: str = typer.Option("simple", "--prompt", help="프롬프트 스타일 (simple/benchmark/detailed)"),
+        prompt_style: str = typer.Option("numerical", "--prompt",
+                                         help="프롬프트 스타일 (simple/benchmark/detailed/numerical)"),
 ):
     if provider not in LLMRegistry.get_providers():
         available = ", ".join(LLMRegistry.get_providers())
@@ -34,6 +36,7 @@ def run(
         "simple": PHYSICS_SIMPLE_PROMPT,
         "benchmark": PHYSICS_BENCHMARK_PROMPT,
         "detailed": PHYSICS_DETAILED_PROMPT,
+        "numerical": PHYSICS_NUMERICAL_PROMPT,
     }
 
     if prompt_style not in prompt_templates:
@@ -44,7 +47,7 @@ def run(
     model_name = get_env(model_env_var)
     spec = ModelSpec(provider=provider, model=model_name, temperature=temperature, max_tokens=max_tokens)
 
-    loader = JsonDatasetLoader(dataset)
+    loader = SciBenchDatasetLoader(dataset)
     items = loader.load(limit=limit)
 
     runner = BenchmarkRunner(

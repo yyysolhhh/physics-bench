@@ -2,13 +2,13 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-from rich.progress import Progress
 from rich.console import Console
+from rich.progress import Progress
 
 from physics_bench.dataset.loader import DatasetItem
-from physics_bench.llm.base import BaseLLMClient
 from physics_bench.llm import LLMRegistry
-from physics_bench.prompts import PHYSICS_BENCHMARK_PROMPT, PHYSICS_USER_PROMPT
+from physics_bench.llm.base import BaseLLMClient
+from physics_bench.prompts import PHYSICS_USER_PROMPT
 from .evaluator import PhysicsEvaluator, EvaluationResult
 
 
@@ -47,15 +47,16 @@ class BenchmarkRunner:
 
         with Progress() as progress:
             task = progress.add_task("진행중...", total=len(items))
-            
+
             for i, item in enumerate(items):
                 user_prompt = self.user_prompt_template.format(question=item.question)
 
                 answer = llm.generate_answer(system_prompt=self.system_prompt, user_prompt=user_prompt)
+                print(answer)
                 cleaned_answer = self._clean_answer(answer)
-                
+
                 is_correct = self.evaluator.evaluate_single(cleaned_answer, item.answer)
-                
+
                 # 상세 결과 저장
                 detailed_results.append({
                     'id': item.id,
@@ -66,28 +67,29 @@ class BenchmarkRunner:
                     'predicted': cleaned_answer,
                     'is_correct': is_correct
                 })
-                
+
                 if self.verbose:
-                    self.console.print(f"\n[bold blue]문제 {i+1}/{len(items)}[/bold blue]")
+                    self.console.print(f"\n[bold blue]문제 {i + 1}/{len(items)}[/bold blue]")
                     self.console.print(f"[yellow]Source:[/yellow] {item.source}")
                     self.console.print(f"[yellow]Problem ID:[/yellow] {item.problemid}")
                     self.console.print(f"[green]정답:[/green] {item.answer}")
                     self.console.print(f"[blue]예측:[/blue] {cleaned_answer}")
-                    self.console.print(f"[{'green' if is_correct else 'red'}]결과:[/{'green' if is_correct else 'red'}] {'정답' if is_correct else '오답'}")
+                    self.console.print(
+                        f"[{'green' if is_correct else 'red'}]결과:[/{'green' if is_correct else 'red'}] {'정답' if is_correct else '오답'}")
                     self.console.print("-" * 80)
-                
+
                 y_true.append(item.answer)
                 y_pred.append(cleaned_answer)
                 progress.advance(task)
 
         # 전체 결과 계산
         result = self.evaluator.evaluate(y_true=y_true, y_pred=y_pred)
-        
+
         # 상세 통계 출력
         self._print_detailed_stats(result, detailed_results)
-        
+
         return result
-    
+
     def _clean_answer(self, answer: str) -> str:
         """LLM 답변에서 수치와 단위 추출하여 정리"""
         # 1. "답:" 패턴 찾기 (우선순위)
@@ -99,7 +101,7 @@ class BenchmarkRunner:
             r'결과:\s*([^\n]+)',
             r'Final\s*Answer:\s*([^\n]+)',
         ]
-        
+
         for pattern in answer_patterns:
             match = re.search(pattern, answer, re.IGNORECASE)
             if match:
@@ -108,7 +110,7 @@ class BenchmarkRunner:
                 cleaned = re.sub(r'^[-=*]\s*', '', cleaned)  # 앞의 기호 제거
                 cleaned = re.sub(r'\s*[-=*]\s*$', '', cleaned)  # 뒤의 기호 제거
                 return cleaned
-        
+
         # 2. "답:" 없이 수치와 단위가 포함된 줄 찾기
         lines = answer.strip().split('\n')
         for line in reversed(lines):
@@ -118,7 +120,7 @@ class BenchmarkRunner:
                 cleaned = re.sub(r'^[-=*]\s*', '', line)
                 cleaned = re.sub(r'\s*[-=*]\s*$', '', cleaned)
                 return cleaned
-        
+
         # 3. 숫자만 포함된 줄 찾기
         for line in reversed(lines):
             line = line.strip()
@@ -126,21 +128,21 @@ class BenchmarkRunner:
                 cleaned = re.sub(r'^[-=*]\s*', '', line)
                 cleaned = re.sub(r'\s*[-=*]\s*$', '', cleaned)
                 return cleaned
-        
+
         # 4. 마지막으로 전체 답변에서 수치 추출
         numbers = re.findall(r'-?\d+\.?\d*', answer)
         if numbers:
             return numbers[-1]  # 마지막 숫자 반환
-        
+
         return answer.strip()
-    
+
     def _print_detailed_stats(self, result: EvaluationResult, detailed_results: list):
         """상세 통계 출력"""
         self.console.print(f"\n[bold green]=== 벤치마크 결과 ===[/bold green]")
         self.console.print(f"총 문제 수: {result.total}")
         self.console.print(f"정답 수: {result.correct}")
         self.console.print(f"정확도: {result.accuracy:.2%}")
-        
+
         # Source별 성능
         source_stats = {}
         for item in detailed_results:
@@ -150,7 +152,7 @@ class BenchmarkRunner:
             source_stats[source]['total'] += 1
             if item['is_correct']:
                 source_stats[source]['correct'] += 1
-        
+
         self.console.print(f"\n[bold yellow]Source별 성능:[/bold yellow]")
         for source, stats in source_stats.items():
             accuracy = stats['correct'] / stats['total'] if stats['total'] > 0 else 0
