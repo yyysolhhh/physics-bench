@@ -1,10 +1,15 @@
+from pathlib import Path
 from typing import Optional
 
 import typer
 from rich import print
 
-from physics_bench.benchmark import BenchmarkRunner, ModelSpec
-from physics_bench.dataset import SciBenchDatasetLoader, download_huggingface_dataset
+from physics_bench.benchmark import ModelSpec, BenchmarkRunner
+from physics_bench.dataset import (
+    SciBenchDatasetLoader,
+    UGPhysicsMultiSubjectLoader,
+    download_huggingface_dataset
+)
 from physics_bench.llm import LLMRegistry
 from physics_bench.prompts import (
     PHYSICS_BENCHMARK_PROMPT,
@@ -19,11 +24,11 @@ app = typer.Typer()
 
 @app.command("run")
 def run(
-        dataset: str = typer.Option("dataset/dataset.json", "--dataset", help="JSON 데이터셋 경로"),
+        dataset: str = typer.Option("ugphysics", "--dataset", help="데이터셋 타입 (scibench/ugphysics)"),
         provider: str = typer.Option("gemini", "--provider", help=f"모델 제공자 ({', '.join(LLMRegistry.get_providers())})"),
         temperature: float = typer.Option(0.0, "--temperature", help="샘플링 온도"),
         max_tokens: Optional[int] = typer.Option(None, "--max-tokens", help="최대 토큰(미지정 시 모델 기본값)"),
-        limit: Optional[int] = typer.Option(None, "--limit", help="데이터셋 상위 N개로 제한"),
+        limit: Optional[int] = typer.Option(None, "--limit", help="데이터셋 상위 N개로 제한 (UGPhysics는 각 과목마다)"),
         verbose: bool = typer.Option(True, "--verbose", "-v", help="상세한 출력 표시"),
         prompt_style: str = typer.Option("numerical", "--prompt",
                                          help="프롬프트 스타일 (simple/benchmark/detailed/numerical)"),
@@ -43,12 +48,30 @@ def run(
         available = ", ".join(prompt_templates.keys())
         raise typer.BadParameter(f"지원하지 않는 prompt_style: {prompt_style}. 사용 가능: {available}")
 
+    # 데이터셋 타입 검증
+    if dataset not in ["scibench", "ugphysics"]:
+        raise typer.BadParameter(f"지원하지 않는 dataset: {dataset}. 사용 가능: scibench, ugphysics")
+
     model_env_var = LLMRegistry.get_model_env_var(provider)
     model_name = get_env(model_env_var)
     spec = ModelSpec(provider=provider, model=model_name, temperature=temperature, max_tokens=max_tokens)
 
-    loader = SciBenchDatasetLoader(dataset)
-    items = loader.load(limit=limit)
+    # 데이터셋 로드
+    if dataset == "scibench":
+        dataset_path = Path("dataset") / "dataset.json"
+        loader = SciBenchDatasetLoader(dataset_path)
+        items = loader.load(limit=limit)
+    elif dataset == "ugphysics":
+        # UGPhysics: 모든 과목에서 각각 limit만큼 가져오기
+        multi_loader = UGPhysicsMultiSubjectLoader(Path("dataset") / "ugphysics")
+        all_subjects_data = multi_loader.load_all_subjects(language="en", limit_per_subject=limit)
+
+        # 모든 과목의 데이터를 하나의 리스트로 합치기
+        items = []
+        for subject_name, subject_items in all_subjects_data.items():
+            items.extend(subject_items)
+
+        print(f"UGPhysics 로드 완료: {len(all_subjects_data)}개 과목, 총 {len(items)}개 문제")
 
     runner = BenchmarkRunner(
         model_spec=spec,

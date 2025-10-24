@@ -1,11 +1,10 @@
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any
 
 from rich.console import Console
 from rich.progress import Progress
 
-from physics_bench.dataset.loader import DatasetItem
 from physics_bench.llm import LLMRegistry
 from physics_bench.llm.base import BaseLLMClient
 from physics_bench.prompts import PHYSICS_USER_PROMPT
@@ -38,7 +37,7 @@ class BenchmarkRunner:
         self.system_prompt = prompt_template
         self.user_prompt_template = PHYSICS_USER_PROMPT
 
-    def run_with_items(self, items: list[DatasetItem]) -> EvaluationResult:
+    def run_with_items(self, items: list[Any]) -> EvaluationResult:
         llm = _make_llm(self.model_spec)
 
         y_true: list[str] = []
@@ -57,11 +56,11 @@ class BenchmarkRunner:
 
                 is_correct = self.evaluator.evaluate_single(cleaned_answer, item.answer)
 
-                # 상세 결과 저장
+                # 상세 결과 저장 (제네릭하게 처리)
                 detailed_results.append({
-                    'id': item.id,
-                    'problem_id': item.problemid,
-                    'source': item.source,
+                    'id': getattr(item, 'id', getattr(item, 'index', i)),
+                    'problem_id': getattr(item, 'problemid', ''),
+                    'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
                     'question': item.question[:100] + "..." if len(item.question) > 100 else item.question,
                     'ground_truth': item.answer,
                     'predicted': cleaned_answer,
@@ -70,8 +69,11 @@ class BenchmarkRunner:
 
                 if self.verbose:
                     self.console.print(f"\n[bold blue]문제 {i + 1}/{len(items)}[/bold blue]")
-                    self.console.print(f"[yellow]Source:[/yellow] {item.source}")
-                    self.console.print(f"[yellow]Problem ID:[/yellow] {item.problemid}")
+                    source = getattr(item, 'source', getattr(item, 'subject', 'Unknown'))
+                    problem_id = getattr(item, 'problemid', '')
+                    self.console.print(f"[purple]Source:[/purple] {source}")
+                    if problem_id:
+                        self.console.print(f"[purple]Problem ID:[/purple] {problem_id}")
                     self.console.print(f"[green]정답:[/green] {item.answer}")
                     self.console.print(f"[blue]예측:[/blue] {cleaned_answer}")
                     self.console.print(
