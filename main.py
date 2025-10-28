@@ -1,3 +1,5 @@
+import json
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -6,7 +8,6 @@ from rich import print
 
 from physics_bench.benchmark import ModelSpec, BenchmarkRunner
 from physics_bench.dataset import (
-    SciBenchDatasetLoader,
     UGPhysicsMultiSubjectLoader,
     download_huggingface_dataset
 )
@@ -18,17 +19,17 @@ from physics_bench.prompts import (
     PHYSICS_NUMERICAL_PROMPT
 )
 from physics_bench.utils.config import get_env
+from physics_bench.utils.logging_config import generate_log_filename
 
 app = typer.Typer()
 
 
 @app.command("run")
 def run(
-        dataset: str = typer.Option("ugphysics", "--dataset", help="데이터셋 타입 (scibench/ugphysics)"),
         provider: str = typer.Option("gemini", "--provider", help=f"모델 제공자 ({', '.join(LLMRegistry.get_providers())})"),
         temperature: float = typer.Option(0.0, "--temperature", help="샘플링 온도"),
         max_tokens: Optional[int] = typer.Option(None, "--max-tokens", help="최대 토큰(미지정 시 모델 기본값)"),
-        limit: Optional[int] = typer.Option(None, "--limit", help="데이터셋 상위 N개로 제한 (UGPhysics는 각 과목마다)"),
+        limit: Optional[int] = typer.Option(None, "--limit", help="각 과목마다 상위 N개로 제한"),
         verbose: bool = typer.Option(True, "--verbose", "-v", help="상세한 출력 표시"),
         prompt_style: str = typer.Option("numerical", "--prompt",
                                          help="프롬프트 스타일 (simple/benchmark/detailed/numerical)"),
@@ -48,40 +49,86 @@ def run(
         available = ", ".join(prompt_templates.keys())
         raise typer.BadParameter(f"지원하지 않는 prompt_style: {prompt_style}. 사용 가능: {available}")
 
-    # 데이터셋 타입 검증
-    if dataset not in ["scibench", "ugphysics"]:
-        raise typer.BadParameter(f"지원하지 않는 dataset: {dataset}. 사용 가능: scibench, ugphysics")
-
     model_env_var = LLMRegistry.get_model_env_var(provider)
     model_name = get_env(model_env_var)
     spec = ModelSpec(provider=provider, model=model_name, temperature=temperature, max_tokens=max_tokens)
 
-    # 데이터셋 로드
-    if dataset == "scibench":
-        dataset_path = Path("dataset") / "dataset.json"
-        loader = SciBenchDatasetLoader(dataset_path)
-        items = loader.load(limit=limit)
-    elif dataset == "ugphysics":
-        # UGPhysics: 모든 과목에서 각각 limit만큼 가져오기
-        multi_loader = UGPhysicsMultiSubjectLoader(Path("dataset") / "ugphysics")
-        all_subjects_data = multi_loader.load_all_subjects(language="en", limit_per_subject=limit)
+    # 로그 파일 경로 설정 (기본 경로)
+    base_log_file = generate_log_filename(model_name=model_name)
+    base_output_dir = Path(base_log_file).parent
 
-        # 모든 과목의 데이터를 하나의 리스트로 합치기
-        items = []
-        for subject_name, subject_items in all_subjects_data.items():
-            items.extend(subject_items)
+    multi_loader = UGPhysicsMultiSubjectLoader(Path("dataset") / "ugphysics")
+    all_subjects_data = multi_loader.load_all_subjects(language="en", limit_per_subject=limit)
 
-        print(f"UGPhysics 로드 완료: {len(all_subjects_data)}개 과목, 총 {len(items)}개 문제")
+    print(f"UGPhysics 로드 완료: {len(all_subjects_data)}개 과목")
 
-    runner = BenchmarkRunner(
-        model_spec=spec,
-        prompt_template=prompt_templates[prompt_style],
-        verbose=verbose
-    )
-    report = runner.run_with_items(items)
+    all_results = []
+    subject_reports = {}
 
-    print("\n[bold]최종 결과 요약[/bold]")
-    print(f"정답 수: {report.correct}/{report.total} (정확도 {report.accuracy * 100:.2f}%)")
+    # 각 과목별로 실행
+    for subject_name, subject_items in all_subjects_data.items():
+        print(f"\n[bold cyan]=== {subject_name} 실행 중 ===[/bold cyan]")
+
+        # 과목별 로그 파일 경로
+        subject_log_file = str(base_output_dir / subject_name / "benchmark.log")
+
+        # 과목별 runner 실행
+        runner = BenchmarkRunner(
+            model_spec=spec,
+            prompt_template=prompt_templates[prompt_style],
+            verbose=verbose,
+            log_file=subject_log_file
+        )
+        report, detailed_results = runner.run_with_items(subject_items)
+
+        # 과목별 결과 저장
+        subject_reports[subject_name] = report
+
+        # 전체 결과에 추가 (각 문제별 상세 결과에 subject 추가)
+        for result in detailed_results:
+            result['subject'] = subject_name
+        all_results.extend(detailed_results)
+
+    # 전체 결과 계산
+    total_correct = sum(r.correct for r in subject_reports.values())
+    total_items = sum(r.total for r in subject_reports.values())
+    overall_accuracy = total_correct / total_items if total_items > 0 else 0
+
+    # 전체 결과 JSON 저장 (날짜 폴더 바로 아래)
+    overall_json_path = base_output_dir / "overall_results.json"
+    overall_data = {
+        'metadata': {
+            'model_provider': spec.provider,
+            'model_name': spec.model,
+            'temperature': spec.temperature,
+            'max_tokens': spec.max_tokens,
+            'dataset': dataset,
+            'prompt_style': prompt_style,
+            'timestamp': datetime.now().isoformat()
+        },
+        'summary': {
+            'total_problems': total_items,
+            'total_correct': total_correct,
+            'overall_accuracy': round(overall_accuracy, 4),
+            'subject_count': len(subject_reports)
+        },
+        'subject_statistics': {
+            subject: {
+                'total': report.total,
+                'correct': report.correct,
+                'accuracy': round(report.accuracy, 4)
+            }
+            for subject, report in subject_reports.items()
+        },
+        'all_problems': all_results
+    }
+
+    with open(overall_json_path, 'w', encoding='utf-8') as f:
+        json.dump(overall_data, f, ensure_ascii=False, indent=2)
+
+    print(f"\n[bold green]=== 전체 결과 ===[/bold green]")
+    print(f"[bold]전체 결과 파일: {overall_json_path}[/bold]")
+    print(f"[bold]최종 결과: {total_correct}/{total_items} (정확도 {overall_accuracy * 100:.2f}%)[/bold]")
 
 
 @app.command("download")
