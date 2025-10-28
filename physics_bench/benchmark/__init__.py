@@ -1,4 +1,4 @@
-from .evaluator import EvaluationResult, ExactMatchEvaluator
+from .evaluator import EvaluationResult, PhysicsEvaluator
 from .runner import BenchmarkRunner, ModelSpec
 
-__all__ = ["BenchmarkRunner", "ModelSpec", "EvaluationResult", "ExactMatchEvaluator"]
+__all__ = ["BenchmarkRunner", "ModelSpec", "EvaluationResult", "PhysicsEvaluator"]
