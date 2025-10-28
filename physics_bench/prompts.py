@@ -1,107 +1,6 @@
-PHYSICS_TUTOR_SYSTEM_PROMPT = "You are an expert physics tutor. Answer the question concisely and accurately."
+PHYSICS_TUTOR_SYSTEM_PROMPT = ""
 
 PHYSICS_USER_PROMPT = "Question: {question}"
-
-# 물리학 벤치마크용 프롬프트
-PHYSICS_BENCHMARK_PROMPT = """당신은 물리학 전문가입니다. 다음 지침에 따라 물리학 문제를 체계적으로 해결하세요.
-
-해결 과정:
-1. 주어진 정보 정리
-2. 관련 물리 법칙과 공식 적용
-3. 계산 과정
-4. 최종 답변
-
-답변 형식:
-- 각 단계를 명확히 구분하여 설명
-- 사용한 공식은 LaTeX 형식으로 표시 (예: $F = ma$, $E = mc^2$)
-- 계산 과정을 상세히 보여주세요
-- 최종 답변은 반드시 다음 형식으로 제시: "답: [수치] [단위]"
-
-수학 기호 및 단위 표기법:
-- 수학 기호는 LaTeX 문법 사용: $\\sqrt{2}$, $\\pi$, $\\sin$, $\\cos$, $\\frac{a}{b}$
-- 단위는 LaTeX 문법 사용: $\\mathrm{m}$, $\\mathrm{s}$, $\\mathrm{kg}$, $\\mathrm{m/s^2}$
-- 복잡한 수식: $2\\sqrt{2}\\sin\\frac{\\pi}{2\\sqrt{2}}$
-- 분수: $\\frac{1}{2}$, $\\frac{a+b}{c-d}$
-
-주의사항:
-- 수치는 소수점 3자리까지 표시
-- 단위는 정확히 표기
-- 답변은 반드시 "답:"으로 시작
-- 불필요한 설명은 생략하고 핵심만 제시
-"""
-
-# 간단한 물리학 프롬프트 (빠른 평가용)
-PHYSICS_SIMPLE_PROMPT = """물리학 문제를 해결해주세요.
-
-답변 형식:
-- 풀이 과정을 간단히 설명
-- 수학 기호는 LaTeX 문법 사용: $\\sqrt{2}$, $\\pi$, $\\sin$, $\\frac{a}{b}$
-- 단위는 다음 규칙에 따라 표기:
-  * 길이: $\\mathrm{m}$ (미터) - cm, mm, km 등은 m로 변환
-  * 시간: $\\mathrm{s}$ (초) - min, hour 등은 s로 변환  
-  * 질량: $\\mathrm{kg}$ (킬로그램) - g은 kg로 변환
-  * 온도: $\\mathrm{K}$ (켈빈) - °C는 K로 변환
-  * 에너지: $\\mathrm{J}$ (줄) - kJ, MJ 등은 J로 변환
-  * 힘: $\\mathrm{N}$ (뉴턴)
-  * 전하: $\\mathrm{C}$ (쿨롱) - μC, nC 등은 C로 변환
-  * 압력: $\\mathrm{Pa}$ (파스칼) - bar, atm 등은 Pa로 변환
-  * 속도: $\\mathrm{m/s}$ (미터/초)
-  * 가속도: $\\mathrm{m/s^2}$ (미터/초²)
-  * 각도: $\\mathrm{rad}$ (라디안) - 도(°)는 rad로 변환
-- 최종 답변은 "답: [수치] [단위]" 형태로 제시 (숫자와 단위는 공백으로 구분)
-- 답변 예시: "답: 210 $\\mathrm{m}$" (숫자와 단위를 $로 묶지 말고 공백으로 구분)
-"""
-
-# 상세한 물리학 프롬프트 (깊이 있는 분석용)
-PHYSICS_DETAILED_PROMPT = """당신은 물리학 교수입니다. 다음 문제를 학생에게 설명하듯이 자세히 해결해주세요.
-
-해결 과정:
-1. 문제 분석 및 주어진 정보 정리
-2. 관련 물리 법칙과 공식 설명
-3. 단계별 계산 과정
-4. 결과 해석 및 검증
-5. 최종 답변
-
-답변 형식:
-- 각 단계를 명확히 구분
-- 사용한 공식은 LaTeX 형식으로 표시 (예: $F = ma$, $E = mc^2$)
-- 계산 과정을 상세히 보여주세요
-- 단위 변환 과정도 포함
-- 최종 답변은 "답: [수치] [단위]" 형태로 제시 (숫자와 단위는 공백으로 구분)
-- 답변 예시: "답: 210 $\\mathrm{m}$" (숫자와 단위를 $로 묶지 말고 공백으로 구분)
-
-수학 기호 및 단위 표기법:
-- 수학 기호는 LaTeX 문법 사용: $\\sqrt{2}$, $\\pi$, $\\sin$, $\\cos$, $\\frac{a}{b}$
-- 단위는 다음 규칙에 따라 표기:
-  * 길이: $\\mathrm{m}$ (미터) - cm, mm, km 등은 m로 변환
-  * 시간: $\\mathrm{s}$ (초) - min, hour 등은 s로 변환  
-  * 질량: $\\mathrm{kg}$ (킬로그램) - g은 kg로 변환
-  * 온도: $\\mathrm{K}$ (켈빈) - °C는 K로 변환
-  * 에너지: $\\mathrm{J}$ (줄) - kJ, MJ 등은 J로 변환
-  * 힘: $\\mathrm{N}$ (뉴턴)
-  * 전하: $\\mathrm{C}$ (쿨롱) - μC, nC 등은 C로 변환
-  * 압력: $\\mathrm{Pa}$ (파스칼) - bar, atm 등은 Pa로 변환
-  * 속도: $\\mathrm{m/s}$ (미터/초)
-  * 가속도: $\\mathrm{m/s^2}$ (미터/초²)
-  * 각도: $\\mathrm{rad}$ (라디안) - 도(°)는 rad로 변환
-- 복잡한 수식: $2\\sqrt{2}\\sin\\frac{\\pi}{2\\sqrt{2}}$
-- 분수: $\\frac{1}{2}$, $\\frac{a+b}{c-d}$
-- 지수: $x^2$, $e^{-t}$, $10^{23}$
-"""
-
-# UNITS = """
-# * 길이: $\mathrm{mm}$ (미터) - cm, m, km 등은 mm로 변환
-# * 시간: $\mathrm{s}$ (초) - min, hour 등은 s로 변환
-# * 질량: $\mathrm{kg}$ (킬로그램) - g은 kg로 변환
-# * 온도: $\mathrm{K}$ (켈빈) - °C는 K로 변환
-# * 에너지: $\mathrm{J}$ (줄) - kJ, MJ 등은 J로 변환
-# * 힘: $\mathrm{N}$ (뉴턴)
-# * 전하: $\mathrm{C}$ (쿨롱) - μC, nC 등은 C로 변환
-# * 압력: $\mathrm{Pa}$ (파스칼) - bar, atm 등은 Pa로 변환
-# * 속도: $\mathrm{m/s}$ (미터/초)
-# * 가속도: $\mathrm{m/s^2}$ (미터/초²)
-# * 각도: $\mathrm{rad}$ (라디안) - 도(°)는 rad로 변환
-# """
 
 # 간단한 물리학 프롬프트 (수치 계산 강조)
 PHYSICS_NUMERICAL_PROMPT = """물리학 문제를 해결해주세요.
@@ -113,4 +12,32 @@ PHYSICS_NUMERICAL_PROMPT = """물리학 문제를 해결해주세요.
 - 숫자와 단위를 $로 묶지 말고 공백으로 구분
 - 단위는 latex 문법으로 표시
 - 답변에는 오직 최종 답만 포함하고 풀이 과정은 생략
+"""
+
+PHYSICS_EVALUATION_PROMPT = """
+당신은 물리학 문제 채점 전문가입니다. 아래 입력을 보고 예측 답변이 정답과 의미적으로 동일한지 판단하세요.
+
+요구사항:
+- 수학적 등가성, 단위 변환, 소수점 반올림은 허용 범위 내에서 동일로 간주
+- 단, 문제에서 특정 형식(예: 단위, 유효자리수)이 강제된 경우 이를 우선 적용
+- 복잡한 정규화는 하지 말고, 필요한 최소한의 비교로 판정
+
+출력 형식(반드시 다음의 한 줄 JSON만 출력):
+{"is_correct": true|false, "reason": "간단 근거"}
+
+입력:
+- Question: {question}
+- GroundTruth: {ground_truth}
+- Predicted: {predicted}
+"""
+
+# 물리학 벤치마크용 프롬프트
+PHYSICS_BENCHMARK_PROMPT = """
+"""
+
+# 간단한 물리학 프롬프트 (빠른 평가용)
+PHYSICS_SIMPLE_PROMPT = """
+"""
+
+PHYSICS_DETAILED_PROMPT = """
 """
