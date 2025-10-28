@@ -1,6 +1,7 @@
 import json
 import re
 import time
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Any, List
@@ -33,7 +34,7 @@ def _make_llm(spec: ModelSpec) -> BaseLLMClient:
 
 
 class BenchmarkRunner:
-    def __init__(self, model_spec: ModelSpec, prompt_template, verbose: bool = False, log_file: Optional[str] = None):
+    def __init__(self, model_spec: ModelSpec, prompt_template, verbose: bool = False, log_file: Optional[str] = None, concurrency: int = 8):
         self.model_spec = model_spec
         self.evaluator = PhysicsEvaluator()
         self.console = Console()
@@ -45,94 +46,99 @@ class BenchmarkRunner:
         self.log_file = log_file
         self.logger = setup_benchmark_logger(log_file)
         self.start_time = None
+        self.concurrency = max(1, int(concurrency))
 
     def run_with_items(self, items: list[Any]) -> tuple[EvaluationResult, list[dict]]:
         self.start_time = time.time()
         llm = _make_llm(self.model_spec)
 
-        y_true: list[str] = []
-        y_pred: list[str] = []
-        detailed_results = []
+        total_items = len(items)
+        y_true: list[str] = [getattr(item, 'answer', '') for item in items]
+        y_pred: list[str] = [""] * total_items
+        detailed_results: list[dict] = [None] * total_items  # type: ignore[assignment]
 
         # 시작 메시지
-        self.logger.info(f"벤치마크 시작 - 총 {len(items)}개 문제")
+        self.logger.info(f"벤치마크 시작 - 총 {total_items}개 문제")
         self.logger.info(f"모델: {self.model_spec.provider}/{self.model_spec.model}")
 
+        async def _process_all() -> None:
+            sem = asyncio.Semaphore(self.concurrency)
+
+            async def _worker(i: int, item: Any) -> None:
+                async with sem:
+                    try:
+                        user_prompt = self.user_prompt_template.format(question=item.question)
+                        answer = await asyncio.to_thread(
+                            llm.generate_answer,
+                            self.system_prompt,
+                            user_prompt,
+                        )
+                        cleaned_answer = self._clean_answer(answer)
+                        is_correct = self.evaluator.evaluate_single(cleaned_answer, item.answer)
+                        item_id = getattr(item, 'id', getattr(item, 'index', i + 1))
+                        self.logger.info(
+                            f"ID:{item_id} | 결과:{'정답' if is_correct else '오답'} | LLM답변:{cleaned_answer} | 정답:{item.answer} | 질문:{item.question}"
+                        )
+                        detailed_results[i] = {
+                            'id': item_id,
+                            'problem_id': getattr(item, 'problemid', ''),
+                            'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
+                            'question': item.question,
+                            'ground_truth': item.answer,
+                            'predicted': cleaned_answer,
+                            'is_correct': is_correct,
+                        }
+                        y_pred[i] = cleaned_answer
+                    except Exception as e:
+                        item_id = getattr(item, 'id', getattr(item, 'index', i + 1))
+                        error_msg = f"ID:{item_id} | 에러: {str(e)}"
+                        self.logger.error(error_msg)
+                        detailed_results[i] = {
+                            'id': item_id,
+                            'problem_id': getattr(item, 'problemid', ''),
+                            'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
+                            'question': item.question,
+                            'ground_truth': item.answer,
+                            'predicted': f"ERROR: {str(e)}",
+                            'is_correct': False,
+                        }
+                        y_pred[i] = "ERROR"
+                    finally:
+                        progress.advance(task)
+
+            async with asyncio.TaskGroup() as tg:
+                for i, item in enumerate(items):
+                    tg.create_task(_worker(i, item))
+
         with Progress() as progress:
-            task = progress.add_task("진행중...", total=len(items))
-
-            for i, item in enumerate(items):
-                try:
-                    user_prompt = self.user_prompt_template.format(question=item.question)
-                    
-                    # LLM 답변 생성
-                    answer = llm.generate_answer(system_prompt=self.system_prompt, user_prompt=user_prompt)
-                    cleaned_answer = self._clean_answer(answer)
-                    
-                    # 정답 평가
-                    is_correct = self.evaluator.evaluate_single(cleaned_answer, item.answer)
-                    
-                    # 로그 출력
-                    item_id = getattr(item, 'id', getattr(item, 'index', i + 1))
-                    self.logger.info(f"ID:{item_id} | 결과:{'정답' if is_correct else '오답'} | LLM답변:{cleaned_answer} | 정답:{item.answer} | 질문:{item.question}")
-                    
-                    # 상세 결과 저장
-                    detailed_results.append({
-                        'id': item_id,
-                        'problem_id': getattr(item, 'problemid', ''),
-                        'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
-                        'question': item.question,
-                        'ground_truth': item.answer,
-                        'predicted': cleaned_answer,
-                        'is_correct': is_correct
-                    })
-
-                    y_true.append(item.answer)
-                    y_pred.append(cleaned_answer)
-                    
-                except Exception as e:
-                    # 에러 처리
-                    item_id = getattr(item, 'id', getattr(item, 'index', i + 1))
-                    error_msg = f"ID:{item_id} | 에러: {str(e)}"
-                    self.logger.error(error_msg)
-                    
-                    # 에러가 발생한 경우 오답으로 처리
-                    detailed_results.append({
-                        'id': item_id,
-                        'problem_id': getattr(item, 'problemid', ''),
-                        'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
-                        'question': item.question,
-                        'ground_truth': item.answer,
-                        'predicted': f"ERROR: {str(e)}",
-                        'is_correct': False
-                    })
-                    
-                    y_true.append(item.answer)
-                    y_pred.append("ERROR")
-                
-                progress.advance(task)
+            task = progress.add_task("진행중...", total=total_items)
+            asyncio.run(_process_all())
 
         # 전체 결과 계산
         result = self.evaluator.evaluate(y_true=y_true, y_pred=y_pred)
-        
+
         # 완료 메시지
         elapsed_time = time.time() - self.start_time
-        
+
         # 토큰 사용량 정보
         usage_stats = llm.get_usage_stats()
         if usage_stats:
-            self.logger.info(f"토큰 사용량 - Total:{usage_stats.get('total_tokens', 0)}, Prompt:{usage_stats.get('prompt_tokens', 0)}, Completion:{usage_stats.get('completion_tokens', 0)}")
-        
-        self.logger.info(f"벤치마크 완료 - 정답:{result.correct}/{result.total} (정확도:{result.accuracy:.2%}) - 소요시간:{elapsed_time:.1f}초")
+            self.logger.info(
+                f"토큰 사용량 - Total:{usage_stats.get('total_tokens', 0)}, Prompt:{usage_stats.get('prompt_tokens', 0)}, Completion:{usage_stats.get('completion_tokens', 0)}"
+            )
+
+        self.logger.info(
+            f"벤치마크 완료 - 정답:{result.correct}/{result.total} (정확도:{result.accuracy:.2%}) - 소요시간:{elapsed_time:.1f}초"
+        )
 
         # 상세 통계 출력
-        self._print_detailed_stats(result, detailed_results)
-        
+        self._print_detailed_stats(result, [r for r in detailed_results if r is not None])
+
         # JSON 파일 저장
         if self.log_file:
-            self._save_results_json(result, detailed_results, elapsed_time, usage_stats)
+            self._save_results_json(result, [r for r in detailed_results if r is not None], elapsed_time, usage_stats)
 
-        return result, detailed_results
+        return result, [r for r in detailed_results if r is not None]
 
     def _clean_answer(self, answer: str) -> str:
         """LLM 답변에서 수치와 단위 추출하여 정리"""
