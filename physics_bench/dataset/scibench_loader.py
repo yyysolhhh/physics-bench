@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from .base_loader import DatasetLoader
 
@@ -16,11 +16,11 @@ class SciBenchItem:
     unit: str = ""
     source: str = ""
     problemid: str = ""
-    
+
     @property
     def question(self) -> str:
         return self.problem_text
-    
+
     @property
     def answer(self) -> str:
         if self.unit:
@@ -30,28 +30,19 @@ class SciBenchItem:
 
 class SciBenchDatasetLoader(DatasetLoader):
     """SciBench 데이터셋을 위한 JSON 로더"""
-    
+
     def __init__(self, path: str | Path):
         self.path = Path(path)
         if not self.path.exists():
             raise FileNotFoundError(f"데이터셋 파일을 찾을 수 없습니다: {self.path}")
 
-    def load(self, limit: Optional[int] = None) -> List[SciBenchItem]:
-        """SciBench JSON 데이터셋을 로드합니다.
-        
-        Args:
-            limit: 로드할 최대 아이템 수 (None이면 모든 아이템)
-            
-        Returns:
-            SciBenchItem 리스트
-        """
+    def load(self, limit: Optional[int] = None) -> list[SciBenchItem]:
         with self.path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-            
-        items: List[SciBenchItem] = []
-        
+
+        items: list[SciBenchItem] = []
+
         for row in data:
-            # 필수 필드 추출
             item_id = row.get("id", 0)
             problem_text = str(row.get("problem_text", "")).strip()
             answer_number = str(row.get("answer_number", "")).strip()
@@ -59,11 +50,10 @@ class SciBenchDatasetLoader(DatasetLoader):
             unit = str(row.get("unit", "")).strip()
             source = str(row.get("source", "")).strip()
             problemid = str(row.get("problemid", "")).strip()
-            
-            # 필수 필드 검증
+
             if not problem_text or not answer_number:
                 continue
-                
+
             items.append(SciBenchItem(
                 id=item_id,
                 problem_text=problem_text,
@@ -73,8 +63,8 @@ class SciBenchDatasetLoader(DatasetLoader):
                 source=source,
                 problemid=problemid
             ))
-            
+
             if limit is not None and len(items) >= limit:
                 break
-                
+
         return items

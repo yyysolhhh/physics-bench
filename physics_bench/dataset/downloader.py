@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any
 
 from datasets import load_dataset, load_dataset_builder
 
@@ -16,14 +16,14 @@ def _default_output_name(dataset_name: str, split: str) -> str:
     return f"{dataset_suffix}_{split}.json"
 
 
-def _collect_items(dataset_name: str, split: str, limit: Optional[int]) -> List[Dict[str, Any]]:
+def _collect_items(dataset_name: str, split: str, limit: Optional[int]) -> list[dict[str, Any]]:
     try:
         # ds = load_dataset(dataset_name, split=split)
         ds = load_dataset(dataset_name)
     except Exception as e:
         raise ValueError(f"데이터셋 '{dataset_name}' '{split}' 로드 실패: {e}") from e
 
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for i, row in enumerate(ds):
         if limit is not None and i >= limit:
             break
@@ -36,7 +36,7 @@ def _write_json(path: Path, payload: Any) -> None:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
 
-def _load_metadata_index(index_path: Path) -> List[Dict[str, Any]]:
+def _load_metadata_index(index_path: Path) -> list[dict[str, Any]]:
     if not index_path.exists():
         return []
     try:
@@ -47,7 +47,7 @@ def _load_metadata_index(index_path: Path) -> List[Dict[str, Any]]:
         return []
 
 
-def _build_metadata_entry(dataset_name: str, split: str, num_samples: int) -> Dict[str, Any]:
+def _build_metadata_entry(dataset_name: str, split: str, num_samples: int) -> dict[str, Any]:
     builder = load_dataset_builder(dataset_name)
     info = builder.info
     return {

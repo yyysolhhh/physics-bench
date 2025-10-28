@@ -1,10 +1,10 @@
+import asyncio
 import json
 import re
 import time
-import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Any, List
+from typing import Optional, Any
 
 from rich.console import Console
 from rich.progress import Progress
@@ -34,14 +34,15 @@ def _make_llm(spec: ModelSpec) -> BaseLLMClient:
 
 
 class BenchmarkRunner:
-    def __init__(self, model_spec: ModelSpec, prompt_template, verbose: bool = False, log_file: Optional[str] = None, concurrency: int = 8):
+    def __init__(self, model_spec: ModelSpec, prompt_template, verbose: bool = False, log_file: Optional[str] = None,
+                 concurrency: int = 8):
         self.model_spec = model_spec
         self.evaluator = PhysicsEvaluator()
         self.console = Console()
         self.verbose = verbose
         self.system_prompt = prompt_template
         self.user_prompt_template = PHYSICS_USER_PROMPT
-        
+
         # 로깅 설정
         self.log_file = log_file
         self.logger = setup_benchmark_logger(log_file)
@@ -208,25 +209,27 @@ class BenchmarkRunner:
             for source, stats in source_stats.items():
                 accuracy = stats['correct'] / stats['total'] if stats['total'] > 0 else 0
                 self.console.print(f"  {source}: {stats['correct']}/{stats['total']} ({accuracy:.2%})")
-    
-    def _save_results_json(self, result: EvaluationResult, detailed_results: list, elapsed_time: float, usage_stats: Optional[dict] = None):
+
+    def _save_results_json(self, result: EvaluationResult, detailed_results: list, elapsed_time: float,
+                           usage_stats: Optional[dict] = None):
         """결과를 JSON 파일로 저장"""
         if not self.log_file:
             return
-        
+
         # 로그 파일 경로를 기반으로 JSON 파일 경로 생성
         log_path = Path(self.log_file)
         json_path = log_path.parent / "results.json"
-        
+
         # 메타데이터 구성
         metadata = {
             'model_provider': self.model_spec.provider,
             'model_name': self.model_spec.model,
             'temperature': self.model_spec.temperature,
             'max_tokens': self.model_spec.max_tokens,
-            'prompt_template': self.system_prompt[:100] + '...' if len(self.system_prompt) > 100 else self.system_prompt,
+            'prompt_template': self.system_prompt[:100] + '...' if len(
+                self.system_prompt) > 100 else self.system_prompt,
         }
-        
+
         # 요약 통계
         summary = {
             'total': result.total,
@@ -234,11 +237,11 @@ class BenchmarkRunner:
             'accuracy': result.accuracy,
             'elapsed_time_seconds': round(elapsed_time, 2)
         }
-        
+
         # 토큰 사용량 정보 추가
         if usage_stats:
             summary['token_usage'] = usage_stats
-        
+
         # 소스별 통계 계산
         source_stats = {}
         for item in detailed_results:
@@ -248,7 +251,7 @@ class BenchmarkRunner:
             source_stats[source]['total'] += 1
             if item['is_correct']:
                 source_stats[source]['correct'] += 1
-        
+
         # JSON 데이터 구성
         output_data = {
             'metadata': metadata,
@@ -263,9 +266,9 @@ class BenchmarkRunner:
             },
             'results': detailed_results
         }
-        
+
         # JSON 파일 저장
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, ensure_ascii=False, indent=2)
-        
+
         self.logger.info(f"결과 파일: {json_path}")

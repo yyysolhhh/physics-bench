@@ -57,18 +57,9 @@ class UGPhysicsDatasetLoader(DatasetLoader):
                     continue
 
     def load(self, limit: Optional[int] = None) -> list[UGPhysicsItem]:
-        """UGPhysics JSONL 데이터셋을 로드합니다.
-        
-        Args:
-            limit: 로드할 최대 아이템 수 (None이면 모든 아이템)
-            
-        Returns:
-            UGPhysicsItem 리스트
-        """
         items: list[UGPhysicsItem] = []
 
         for row in self._iter_lines():
-            # 필수 필드 추출
             index = row.get("index", 0)
             domain = str(row.get("domain", "")).strip()
             subject = str(row.get("subject", "")).strip()
@@ -82,7 +73,6 @@ class UGPhysicsDatasetLoader(DatasetLoader):
             language = str(row.get("language", "EN")).strip()
             level = str(row.get("level", "")).strip()
 
-            # 필수 필드 검증
             if not problem or not answers:
                 continue
 
@@ -108,7 +98,7 @@ class UGPhysicsDatasetLoader(DatasetLoader):
 
 
 class UGPhysicsMultiSubjectLoader:
-    """여러 UGPhysics 과목을 한번에 로드하는 헬퍼 클래스"""
+    """여러 UGPhysics 과목을 한번에 로드하는 클래스"""
 
     def __init__(self, base_path: str | Path):
         self.base_path = Path(base_path)

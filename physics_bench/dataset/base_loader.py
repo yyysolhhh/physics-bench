@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Any
+from typing import Optional, Any
 
 
 class DatasetLoader(ABC):
     """데이터셋 로더의 기본 인터페이스"""
 
     @abstractmethod
-    def load(self, limit: Optional[int] = None) -> List[Any]:
+    def load(self, limit: Optional[int] = None) -> list[Any]:
         """
         Args:
             limit: 로드할 최대 아이템 수 (None이면 모든 아이템)

@@ -36,7 +36,6 @@ def setup_benchmark_logger(log_file: Optional[str] = None) -> logging.Logger:
 
 def generate_log_filename(model_name: str = "", test_name: str = "", prefix: str = "benchmark") -> str:
     """로그 파일명 생성 (outputs/모델명/datetime 폴더 구조)"""
-    # datetime 기반 폴더명 생성 (YYYYMMDD_HHMMSS 형식)
     now = datetime.now()
     timestamp = now.strftime("%Y%m%d_%H%M%S")
 
