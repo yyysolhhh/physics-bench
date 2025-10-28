@@ -30,6 +30,9 @@ ANTHROPIC_MODEL=
 GEMINI_API_KEY=
 GEMINI_MODEL=
 
+# Ollama 설정 (로컬 기본 설정 사용 시 불필요)
+# OLLAMA_BASE_URL=http://localhost:11434  # 다른 서버 사용 시만 필요
+
 # LangSmith 설정 (선택사항 - 토큰 사용량 추적)
 LANGCHAIN_API_KEY=
 LANGCHAIN_TRACING_V2=true
@@ -66,7 +69,35 @@ OpenAI 클라이언트를 사용할 때 LangSmith로 상세한 추적 및 분석
    - 대시보드에서 각 호출별 상세 정보 확인
    - 호출 체인, 프롬프트, 응답, 지연시간 등 분석 가능
 
-> **참고**: Qwen, Anthropic, Gemini는 네이티브 SDK를 사용하므로 LangSmith 자동 추적이 되지 않지만, 토큰 사용량은 기본적으로 추적됩니다.
+> **참고**: OpenAI와 Ollama는 LangChain을 사용하므로 LangSmith 자동 추적이 가능합니다. Qwen, Anthropic, Gemini는 네이티브 SDK를 사용하므로 LangSmith 자동 추적이 되지 않지만, 토큰 사용량은 기본적으로 추적됩니다.
+
+## Ollama 사용
+
+로컬에 Ollama로 설치한 모델을 사용할 수 있습니다:
+
+### 1. Ollama 설치 및 모델 다운로드
+```bash
+# Ollama 설치 (https://ollama.ai)
+# 모델 다운로드
+ollama pull qwen2.5-math:7b
+ollama pull qwen3:8b
+ollama pull gemma3:4b
+ollama pull llama3.1:8b
+```
+
+### 2. 벤치마크 실행
+```bash
+# 특정 모델로 실행
+python main.py run --provider ollama --model qwen2.5-math:7b
+
+# 다른 옵션과 함께
+python main.py run --provider ollama --model llama3.1:8b --limit 5 --temperature 0.7
+```
+
+### 3. 설치된 모델 확인
+```bash
+ollama list
+```
 
 ## 실행 예시
 
@@ -94,11 +125,20 @@ python main.py download {데이터셋 이름} validation --limit 100
 python main.py run
 
 # 옵션 사용
-python main.py run --dataset downloaded_dataset.json --provider qwen --limit 10
+python main.py run --provider qwen --limit 10
+python main.py run --provider openai --limit 10
+python main.py run --provider anthropic --limit 10
+
+# Ollama 모델 사용
+python main.py run --provider ollama --model qwen2.5-math:7b --limit 5
+python main.py run --provider ollama --model qwen3:8b
+python main.py run --provider ollama --model gemma3:4b --limit 10
+python main.py run --provider ollama --model llama3.1:8b
 ```
 
 **run 명령어 옵션:**
-- `--provider`: 모델 제공자 (기본값: gemini, 선택: openai, qwen, anthropic, gemini)
+- `--provider`: 모델 제공자 (기본값: gemini, 선택: openai, qwen, anthropic, gemini, ollama)
+- `--model`: 모델 이름 (Ollama 사용 시 필수, 예: qwen2.5-math:7b)
 - `--limit`: 각 과목마다 상위 N개로 제한 (선택)
 - `--temperature`: 샘플링 온도 (기본값: 0.0)
 - `--max-tokens`: 최대 토큰 (선택)

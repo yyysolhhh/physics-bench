@@ -27,6 +27,7 @@ app = typer.Typer()
 @app.command("run")
 def run(
         provider: str = typer.Option("gemini", "--provider", help=f"모델 제공자 ({', '.join(LLMRegistry.get_providers())})"),
+        model: str = typer.Option(None, "--model", help="모델 이름 (Ollama 사용 시 필수, 예: qwen2.5-math:7b)"),
         temperature: float = typer.Option(0.0, "--temperature", help="샘플링 온도"),
         max_tokens: Optional[int] = typer.Option(None, "--max-tokens", help="최대 토큰(미지정 시 모델 기본값)"),
         limit: Optional[int] = typer.Option(None, "--limit", help="각 과목마다 상위 N개로 제한"),
@@ -49,8 +50,17 @@ def run(
         available = ", ".join(prompt_templates.keys())
         raise typer.BadParameter(f"지원하지 않는 prompt_style: {prompt_style}. 사용 가능: {available}")
 
-    model_env_var = LLMRegistry.get_model_env_var(provider)
-    model_name = get_env(model_env_var)
+    # Ollama는 모델 이름을 직접 지정, 다른 provider는 환경변수 사용
+    if provider == "ollama":
+        if not model:
+            raise typer.BadParameter("Ollama 사용 시 --model 옵션이 필요합니다. 예: --model qwen2.5-math:7b")
+        model_name = model
+    else:
+        model_env_var = LLMRegistry.get_model_env_var(provider)
+        model_name = get_env(model_env_var)
+        if not model_name:
+            raise typer.BadParameter(f"{model_env_var} 환경변수가 설정되지 않았습니다.")
+    
     spec = ModelSpec(provider=provider, model=model_name, temperature=temperature, max_tokens=max_tokens)
 
     # 로그 파일 경로 설정 (기본 경로)
