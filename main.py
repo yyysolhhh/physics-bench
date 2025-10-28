@@ -60,7 +60,7 @@ def run(
         model_name = get_env(model_env_var)
         if not model_name:
             raise typer.BadParameter(f"{model_env_var} 환경변수가 설정되지 않았습니다.")
-    
+
     spec = ModelSpec(provider=provider, model=model_name, temperature=temperature, max_tokens=max_tokens)
 
     # 로그 파일 경로 설정 (기본 경로)
@@ -72,7 +72,6 @@ def run(
 
     print(f"UGPhysics 로드 완료: {len(all_subjects_data)}개 과목")
 
-    all_results = []
     subject_reports = {}
 
     # 각 과목별로 실행
@@ -93,11 +92,6 @@ def run(
 
         # 과목별 결과 저장
         subject_reports[subject_name] = report
-
-        # 전체 결과에 추가 (각 문제별 상세 결과에 subject 추가)
-        for result in detailed_results:
-            result['subject'] = subject_name
-        all_results.extend(detailed_results)
 
     # 전체 결과 계산
     total_correct = sum(r.correct for r in subject_reports.values())
@@ -128,8 +122,7 @@ def run(
                 'accuracy': round(report.accuracy, 4)
             }
             for subject, report in subject_reports.items()
-        },
-        'all_problems': all_results
+        }
     }
 
     with open(overall_json_path, 'w', encoding='utf-8') as f:
@@ -138,11 +131,12 @@ def run(
     print(f"\n[bold green]=== 전체 결과 ===[/bold green]")
     print(f"[bold]전체 결과 파일: {overall_json_path}[/bold]")
     print(f"[bold]최종 결과: {total_correct}/{total_items} (정확도 {overall_accuracy * 100:.2f}%)[/bold]")
-    
+
     # 토큰 사용량 정보 출력
     if overall_data['summary'].get('token_usage'):
         usage = overall_data['summary']['token_usage']
-        print(f"[bold cyan]토큰 사용량: Total={usage.get('total_tokens', 0)}, Prompt={usage.get('prompt_tokens', 0)}, Completion={usage.get('completion_tokens', 0)}[/bold cyan]")
+        print(
+            f"[bold cyan]토큰 사용량: Total={usage.get('total_tokens', 0)}, Prompt={usage.get('prompt_tokens', 0)}, Completion={usage.get('completion_tokens', 0)}[/bold cyan]")
 
 
 @app.command("download")
