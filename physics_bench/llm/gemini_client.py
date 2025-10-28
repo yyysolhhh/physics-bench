@@ -4,7 +4,6 @@ import google.generativeai as genai
 
 from .base import BaseLLMClient
 from .registry import register_llm
-from ..prompts import PHYSICS_TUTOR_SYSTEM_PROMPT, PHYSICS_USER_PROMPT
 from ..utils.config import get_env
 
 
@@ -29,8 +28,7 @@ class GeminiClient(BaseLLMClient):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.model_name = model_name
-        
-        # 토큰 사용량 추적용
+
         self.total_tokens = 0
         self.total_prompt_tokens = 0
         self.total_completion_tokens = 0
@@ -52,11 +50,9 @@ class GeminiClient(BaseLLMClient):
             user_prompt,
             generation_config=generation_config
         )
-        
-        # Gemini는 토큰 사용량 정보를 제공하지 않지만, 응답 길이로 대략 추정
-        # 실제로는 비어있는 값이지만 구조는 유지
+
         return response.text.strip()
-    
+
     @override
     def get_usage_stats(self) -> dict:
         """토큰 사용량 통계 반환 (Gemini는 정보 제공 안 함)"""

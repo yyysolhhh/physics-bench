@@ -13,7 +13,6 @@ def setup_benchmark_logger(log_file: Optional[str] = None) -> logging.Logger:
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
 
-    # 포맷터 설정
     formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%H:%M:%S')
 
     # 콘솔 핸들러
@@ -24,7 +23,6 @@ def setup_benchmark_logger(log_file: Optional[str] = None) -> logging.Logger:
 
     # 파일 핸들러 (선택사항)
     if log_file:
-        # 로그 디렉토리 생성
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -37,20 +35,17 @@ def setup_benchmark_logger(log_file: Optional[str] = None) -> logging.Logger:
 
 
 def generate_log_filename(model_name: str = "", test_name: str = "", prefix: str = "benchmark") -> str:
-    """로그 파일명 생성 (모델명/datetime 폴더 구조)"""
+    """로그 파일명 생성 (outputs/모델명/datetime 폴더 구조)"""
     # datetime 기반 폴더명 생성 (YYYYMMDD_HHMMSS 형식)
     now = datetime.now()
     timestamp = now.strftime("%Y%m%d_%H%M%S")
 
-    # outputs 폴더 아래에 모델명/datetime 구조 생성
     log_dir = Path("outputs") / model_name / timestamp
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    # 로그 파일명 생성
     if test_name:
         log_filename = f"{prefix}_{test_name}.log"
     else:
         log_filename = f"{prefix}.log"
 
-    # 전체 경로 반환
     return str(log_dir / log_filename)

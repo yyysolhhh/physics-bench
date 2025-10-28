@@ -63,7 +63,6 @@ def run(
 
     spec = ModelSpec(provider=provider, model=model_name, temperature=temperature, max_tokens=max_tokens)
 
-    # 로그 파일 경로 설정 (기본 경로)
     base_log_file = generate_log_filename(model_name=model_name)
     base_output_dir = Path(base_log_file).parent
 
@@ -78,11 +77,9 @@ def run(
     for subject_name, subject_items in all_subjects_data.items():
         print(f"\n[bold cyan]=== {subject_name} 실행 중 ===[/bold cyan]")
 
-        # 과목별 로그 파일 경로
         run_timestamp = base_output_dir.name  # YYYYMMDD_HHMMSS
         subject_log_file = str(base_output_dir / subject_name / f"{subject_name}_{run_timestamp}.log")
 
-        # 과목별 runner 실행
         runner = BenchmarkRunner(
             model_spec=spec,
             prompt_template=prompt_templates[prompt_style],
@@ -91,7 +88,6 @@ def run(
         )
         report, detailed_results = runner.run_with_items(subject_items)
 
-        # 과목별 결과 저장
         subject_reports[subject_name] = report
 
     # 전체 결과 계산
@@ -99,7 +95,6 @@ def run(
     total_items = sum(r.total for r in subject_reports.values())
     overall_accuracy = total_correct / total_items if total_items > 0 else 0
 
-    # 전체 결과 JSON 저장 (날짜 폴더 바로 아래)
     overall_json_path = base_output_dir / "overall_results.json"
     overall_data = {
         'metadata': {
@@ -133,7 +128,6 @@ def run(
     print(f"[bold]전체 결과 파일: {overall_json_path}[/bold]")
     print(f"[bold]최종 결과: {total_correct}/{total_items} (정확도 {overall_accuracy * 100:.2f}%)[/bold]")
 
-    # 토큰 사용량 정보 출력
     if overall_data['summary'].get('token_usage'):
         usage = overall_data['summary']['token_usage']
         print(
