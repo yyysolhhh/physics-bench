@@ -79,7 +79,8 @@ def run(
         print(f"\n[bold cyan]=== {subject_name} 실행 중 ===[/bold cyan]")
 
         # 과목별 로그 파일 경로
-        subject_log_file = str(base_output_dir / subject_name / "benchmark.log")
+        run_timestamp = base_output_dir.name  # YYYYMMDD_HHMMSS
+        subject_log_file = str(base_output_dir / subject_name / f"{subject_name}_{run_timestamp}.log")
 
         # 과목별 runner 실행
         runner = BenchmarkRunner(
