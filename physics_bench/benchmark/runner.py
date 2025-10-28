@@ -117,6 +117,12 @@ class BenchmarkRunner:
         
         # 완료 메시지
         elapsed_time = time.time() - self.start_time
+        
+        # 토큰 사용량 정보
+        usage_stats = llm.get_usage_stats()
+        if usage_stats:
+            self.logger.info(f"토큰 사용량 - Total:{usage_stats.get('total_tokens', 0)}, Prompt:{usage_stats.get('prompt_tokens', 0)}, Completion:{usage_stats.get('completion_tokens', 0)}")
+        
         self.logger.info(f"벤치마크 완료 - 정답:{result.correct}/{result.total} (정확도:{result.accuracy:.2%}) - 소요시간:{elapsed_time:.1f}초")
 
         # 상세 통계 출력
@@ -124,7 +130,7 @@ class BenchmarkRunner:
         
         # JSON 파일 저장
         if self.log_file:
-            self._save_results_json(result, detailed_results, elapsed_time)
+            self._save_results_json(result, detailed_results, elapsed_time, usage_stats)
 
         return result, detailed_results
 
@@ -197,7 +203,7 @@ class BenchmarkRunner:
                 accuracy = stats['correct'] / stats['total'] if stats['total'] > 0 else 0
                 self.console.print(f"  {source}: {stats['correct']}/{stats['total']} ({accuracy:.2%})")
     
-    def _save_results_json(self, result: EvaluationResult, detailed_results: list, elapsed_time: float):
+    def _save_results_json(self, result: EvaluationResult, detailed_results: list, elapsed_time: float, usage_stats: Optional[dict] = None):
         """결과를 JSON 파일로 저장"""
         if not self.log_file:
             return
@@ -222,6 +228,10 @@ class BenchmarkRunner:
             'accuracy': result.accuracy,
             'elapsed_time_seconds': round(elapsed_time, 2)
         }
+        
+        # 토큰 사용량 정보 추가
+        if usage_stats:
+            summary['token_usage'] = usage_stats
         
         # 소스별 통계 계산
         source_stats = {}

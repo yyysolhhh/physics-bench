@@ -24,6 +24,11 @@ class OpenAIClient(BaseLLMClient):
         if max_tokens is not None:
             kwargs["max_tokens"] = max_tokens
         self.llm = ChatOpenAI(**kwargs)
+        
+        # 토큰 사용량 추적용
+        self.total_tokens = 0
+        self.total_prompt_tokens = 0
+        self.total_completion_tokens = 0
 
     @override
     def generate_answer(self, system_prompt: str, user_prompt: str) -> str:
@@ -32,5 +37,22 @@ class OpenAIClient(BaseLLMClient):
             {"role": "user", "content": user_prompt}
         ]
         response = self.llm.invoke(messages)
+        
+        # 사용량 통계 업데이트
+        if hasattr(response, 'response_metadata') and 'token_usage' in response.response_metadata:
+            usage = response.response_metadata['token_usage']
+            self.total_prompt_tokens += usage.get('prompt_tokens', 0)
+            self.total_completion_tokens += usage.get('completion_tokens', 0)
+            self.total_tokens += usage.get('total_tokens', 0)
+        
         text = response.content if hasattr(response, "content") else str(response)
         return text.strip()
+    
+    @override
+    def get_usage_stats(self) -> dict:
+        """토큰 사용량 통계 반환"""
+        return {
+            'total_tokens': self.total_tokens,
+            'prompt_tokens': self.total_prompt_tokens,
+            'completion_tokens': self.total_completion_tokens
+        }

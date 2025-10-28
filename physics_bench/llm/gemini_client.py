@@ -29,6 +29,11 @@ class GeminiClient(BaseLLMClient):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.model_name = model_name
+        
+        # 토큰 사용량 추적용
+        self.total_tokens = 0
+        self.total_prompt_tokens = 0
+        self.total_completion_tokens = 0
 
     @override
     def generate_answer(self, system_prompt: str, user_prompt: str) -> str:
@@ -47,4 +52,16 @@ class GeminiClient(BaseLLMClient):
             user_prompt,
             generation_config=generation_config
         )
+        
+        # Gemini는 토큰 사용량 정보를 제공하지 않지만, 응답 길이로 대략 추정
+        # 실제로는 비어있는 값이지만 구조는 유지
         return response.text.strip()
+    
+    @override
+    def get_usage_stats(self) -> dict:
+        """토큰 사용량 통계 반환 (Gemini는 정보 제공 안 함)"""
+        return {
+            'total_tokens': 0,
+            'prompt_tokens': 0,
+            'completion_tokens': 0
+        }

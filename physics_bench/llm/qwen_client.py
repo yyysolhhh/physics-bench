@@ -28,6 +28,11 @@ class QwenClient(BaseLLMClient):
         self.model_name = model_name
         self.temperature = temperature
         self.max_tokens = max_tokens
+        
+        # 토큰 사용량 추적용
+        self.total_tokens = 0
+        self.total_prompt_tokens = 0
+        self.total_completion_tokens = 0
 
     @override
     def generate_answer(self, system_prompt: str, user_prompt: str) -> str:
@@ -45,4 +50,21 @@ class QwenClient(BaseLLMClient):
             kwargs["max_tokens"] = self.max_tokens
 
         response = self.client.chat.completions.create(**kwargs)
+        
+        # 사용량 통계 업데이트
+        if hasattr(response, 'usage') and response.usage:
+            usage = response.usage
+            self.total_prompt_tokens += getattr(usage, 'prompt_tokens', 0)
+            self.total_completion_tokens += getattr(usage, 'completion_tokens', 0)
+            self.total_tokens += getattr(usage, 'total_tokens', 0)
+        
         return response.choices[0].message.content.strip()
+    
+    @override
+    def get_usage_stats(self) -> dict:
+        """토큰 사용량 통계 반환"""
+        return {
+            'total_tokens': self.total_tokens,
+            'prompt_tokens': self.total_prompt_tokens,
+            'completion_tokens': self.total_completion_tokens
+        }

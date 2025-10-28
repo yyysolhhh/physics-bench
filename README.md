@@ -29,7 +29,44 @@ ANTHROPIC_MODEL=
 # Gemini 설정
 GEMINI_API_KEY=
 GEMINI_MODEL=
+
+# LangSmith 설정 (선택사항 - 토큰 사용량 추적)
+LANGCHAIN_API_KEY=
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_PROJECT=physics-bench
 ```
+
+## 토큰 사용량 추적
+
+모든 LLM 클라이언트에서 토큰 사용량이 자동으로 추적됩니다:
+
+### 1. 자동 수집
+- 각 클라이언트(OpenAI, Anthropic, Gemini, Qwen)가 토큰 사용량을 자동 추적
+- 벤치마크 완료 시 로그에 출력
+- 결과 JSON 파일의 `summary.token_usage`에 저장
+
+### 2. LangSmith 연동 (OpenAI만 지원)
+
+OpenAI 클라이언트를 사용할 때 LangSmith로 상세한 추적 및 분석이 가능합니다:
+
+1. **LangSmith 가입 및 API 키 발급**
+   - https://smith.langchain.com 에서 가입
+   - Settings > API Keys에서 API 키 생성
+
+2. **환경변수 설정**
+   ```bash
+   # .env 파일에 추가
+   LANGCHAIN_API_KEY=your_langsmith_api_key
+   LANGCHAIN_TRACING_V2=true
+   LANGCHAIN_PROJECT=physics-bench
+   ```
+
+3. **LangSmith에서 확인**
+   - OpenAI 클라이언트 사용 시 자동으로 호출 내역 추적
+   - 대시보드에서 각 호출별 상세 정보 확인
+   - 호출 체인, 프롬프트, 응답, 지연시간 등 분석 가능
+
+> **참고**: Qwen, Anthropic, Gemini는 네이티브 SDK를 사용하므로 LangSmith 자동 추적이 되지 않지만, 토큰 사용량은 기본적으로 추적됩니다.
 
 ## 실행 예시
 
@@ -61,8 +98,17 @@ python main.py run --dataset downloaded_dataset.json --provider qwen --limit 10
 ```
 
 **run 명령어 옵션:**
-- `--dataset`: 데이터셋 경로 (기본값: dataset/dataset.json)
-- `--provider`: 모델 제공자 (기본값: qwen, 선택: openai, qwen, anthropic, gemini)
-- `--limit`: 상위 N개로 제한 (선택)
+- `--provider`: 모델 제공자 (기본값: gemini, 선택: openai, qwen, anthropic, gemini)
+- `--limit`: 각 과목마다 상위 N개로 제한 (선택)
 - `--temperature`: 샘플링 온도 (기본값: 0.0)
 - `--max-tokens`: 최대 토큰 (선택)
+- `--prompt`: 프롬프트 스타일 (기본값: numerical, 선택: simple/benchmark/detailed/numerical)
+- `--verbose`: 상세한 출력 표시 (기본값: true)
+
+## 결과 파일
+
+실행 후 `outputs/모델명/날짜시간/` 폴더에 다음 파일들이 생성됩니다:
+
+- `overall_results.json`: 전체 벤치마크 결과 (토큰 사용량 포함)
+- `과목별폴더/benchmark.log`: 과목별 로그 파일
+- `과목별폴더/results.json`: 과목별 상세 결과

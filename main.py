@@ -102,7 +102,6 @@ def run(
             'model_name': spec.model,
             'temperature': spec.temperature,
             'max_tokens': spec.max_tokens,
-            'dataset': dataset,
             'prompt_style': prompt_style,
             'timestamp': datetime.now().isoformat()
         },
@@ -129,6 +128,11 @@ def run(
     print(f"\n[bold green]=== 전체 결과 ===[/bold green]")
     print(f"[bold]전체 결과 파일: {overall_json_path}[/bold]")
     print(f"[bold]최종 결과: {total_correct}/{total_items} (정확도 {overall_accuracy * 100:.2f}%)[/bold]")
+    
+    # 토큰 사용량 정보 출력
+    if overall_data['summary'].get('token_usage'):
+        usage = overall_data['summary']['token_usage']
+        print(f"[bold cyan]토큰 사용량: Total={usage.get('total_tokens', 0)}, Prompt={usage.get('prompt_tokens', 0)}, Completion={usage.get('completion_tokens', 0)}[/bold cyan]")
 
 
 @app.command("download")
