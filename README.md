@@ -152,3 +152,22 @@ python main.py run --provider ollama --model llama3.1:8b
 - `overall_results.json`: 전체 벤치마크 결과 (토큰 사용량 포함)
 - `과목별폴더/benchmark.log`: 과목별 로그 파일
 - `과목별폴더/results.json`: 과목별 상세 결과
+ - `과목별폴더/results.json`: 과목별 상세 결과
+
+## 데이터셋 출처 및 인용
+
+이 프로젝트는 UGPhysics 데이터셋을 사용합니다.
+
+- 원본 저장소: https://github.com/YangLabHKUST/UGPhysics
+- 다운로드(허깅페이스): https://huggingface.co/datasets/UGPhysics/ugphysics
+
+연구 결과나 공개 문서에서 아래 인용문을 사용해 주세요:
+
+```bibtex
+@article{xu2025ugphysics,
+  title={UGPhysics: A Comprehensive Benchmark for Undergraduate Physics Reasoning with Large Language Models},
+  author={Xu, Xin and Xu, Qiyun and Xiao, Tong and Chen, Tianhao and Yan, Yuchen and Zhang, Jiaxin and Diao, Shizhe and Yang, Can and Wang, Yang},
+  journal={arXiv preprint arXiv:2502.00334},
+  year={2025}
+}
+```
