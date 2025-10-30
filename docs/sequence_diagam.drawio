@@ -1,0 +1,96 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="28.2.5">
+  <diagram name="Page-1" id="2YBvvXClWsGukQMizWep">
+    <mxGraphModel dx="1875" dy="1469" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-1" value="DatasetLoader" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="30" y="50" width="150" height="737" as="geometry" />
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-2" value="BenchmarkRunner" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="230" y="50" width="154" height="737" as="geometry" />
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-3" value="LLMRegistry" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="434" y="50" width="150" height="737" as="geometry" />
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-4" value="LLM Client" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="634" y="50" width="150" height="737" as="geometry" />
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-5" value="Evaluator" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="834" y="50" width="150" height="737" as="geometry" />
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-6" value="loop" style="shape=umlFrame;dashed=1;pointerEvents=0;dropTarget=0;strokeColor=#B3B3B3;height=20;width=40" vertex="1" parent="1">
+          <mxGeometry x="223" y="269" width="497" height="327" as="geometry" />
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-7" value="[각 문항]" style="text;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;" vertex="1" parent="Gy_ZXnO_EX-tXdnNWKfl-6">
+          <mxGeometry x="40" width="457" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-8" value="items 전달" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-1" target="Gy_ZXnO_EX-tXdnNWKfl-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="215" y="153" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-9" value="create_client" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-2" target="Gy_ZXnO_EX-tXdnNWKfl-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="417" y="201" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-10" value="LLM 인스턴스" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-3" target="Gy_ZXnO_EX-tXdnNWKfl-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="249" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-11" value="user prompt 구성" style="curved=1;endArrow=block;rounded=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-2" target="Gy_ZXnO_EX-tXdnNWKfl-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="358" y="342" />
+              <mxPoint x="358" y="372" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-12" value="generate_answer system prompt, user prompt" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-2" target="Gy_ZXnO_EX-tXdnNWKfl-4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="517" y="420" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-13" value="답변 텍스트" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-4" target="Gy_ZXnO_EX-tXdnNWKfl-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="520" y="468" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-14" value="clean answer" style="curved=1;endArrow=block;rounded=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-2" target="Gy_ZXnO_EX-tXdnNWKfl-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="358" y="516" />
+              <mxPoint x="358" y="546" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-15" value="evaluate y_true, y_pred" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;endArrow=block;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-2" target="Gy_ZXnO_EX-tXdnNWKfl-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="617" y="634" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Gy_ZXnO_EX-tXdnNWKfl-16" value="정오 결과" style="verticalAlign=bottom;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;endArrow=block;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Gy_ZXnO_EX-tXdnNWKfl-5" target="Gy_ZXnO_EX-tXdnNWKfl-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="620" y="682" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

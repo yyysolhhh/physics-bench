@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant Loader as DatasetLoader
+    participant Runner as BenchmarkRunner
+    participant LLMReg as LLMRegistry
+    participant LLM as LLM Client
+    participant Eval as Evaluator
+    Loader ->> Runner: items 전달
+    Runner ->> LLMReg: create_client
+    LLMReg -->> Runner: LLM 인스턴스
+    loop 각 문항
+        Runner ->> Runner: user prompt 구성
+        Runner ->> LLM: generate_answer system prompt, user prompt
+        LLM -->> Runner: 답변 텍스트
+        Runner ->> Runner: clean answer
+    end
+    Runner ->> Eval: evaluate y_true, y_pred
+    Eval -->> Runner: 정오 결과
