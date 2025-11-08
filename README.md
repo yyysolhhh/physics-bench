@@ -161,10 +161,10 @@ python main.py run --provider ollama --model llama3.1:8b --lang en
 python main.py ask --provider ollama --model qwen2.5-math:7b --lang ko
 
 # 풀이 과정 포함
-python main.py ask --provider ollama --model qwen2.5-math:7b --lang ko --with-solution
+python main.py ask --provider ollama --model qwen3:8b --lang ko --with-solution
 
 # 질문 직접 입력
-python main.py ask --provider ollama --model qwen2.5-math:7b --question "질문 내용"
+python main.py ask --provider ollama --model llama3.1:8b --question "질문 내용"
 ```
 
 **ask 명령어 옵션:**
@@ -190,7 +190,7 @@ python main.py ask --provider ollama --model qwen2.5-math:7b --question "질문 
 이 프로젝트는 UGPhysics 데이터셋을 사용합니다.
 
 - 원본 저장소: https://github.com/YangLabHKUST/UGPhysics
-- 다운로드(허깅페이스): https://huggingface.co/datasets/UGPhysics/ugphysics
+- 다운로드: https://huggingface.co/datasets/UGPhysics/ugphysics
 
 ```bibtex
 @article{xu2025ugphysics,
