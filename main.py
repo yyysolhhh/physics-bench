@@ -21,7 +21,7 @@ from physics_bench.prompts import (
     PHYSICS_USER_PROMPT
 )
 from physics_bench.utils.config import get_env
-from physics_bench.utils.logging_config import generate_log_filename, setup_console_logging
+from physics_bench.utils.logging_config import setup_console_logging
 
 # 애플리케이션 시작 시 로깅 설정 (콘솔에만 출력)
 setup_console_logging()
@@ -85,11 +85,16 @@ def run(
     for subject_name, subject_items in all_subjects_data.items():
         logger.info(f"\n=== {subject_name} 실행 중 ===")
 
+        # 각 과목별 로그 파일 경로 생성
+        subject_log_dir = base_output_dir / subject_name
+        subject_log_dir.mkdir(parents=True, exist_ok=True)
+        subject_log_file = str(subject_log_dir / f"{subject_name}_{timestamp}.log")
+
         runner = BenchmarkRunner(
             model_spec=spec,
             prompt_template=system_prompt,
             verbose=verbose,
-            log_file=None,  # 파일 저장하지 않음, 콘솔에만 출력
+            log_file=subject_log_file,  # 로그 파일 경로 지정 (결과 JSON 저장용)
             solution_prompt_template=solution_prompt,
         )
         report, detailed_results = runner.run_with_items(subject_items)
@@ -116,7 +121,7 @@ def run(
             stats[value]['total'] += 1
             if result.get('is_correct', False):
                 stats[value]['correct'] += 1
-        
+
         return {
             k: {
                 'total': v['total'],
@@ -163,7 +168,7 @@ def run(
     logger.info(f"\n=== 전체 결과 ===")
     logger.info(f"전체 결과 파일: {overall_json_path}")
     logger.info(f"최종 결과: {total_correct}/{total_items} (정확도 {overall_accuracy * 100:.2f}%)")
-    logger.info(f"총 소요 시간: {overall_elapsed_time:.1f}초 ({overall_elapsed_time/60:.1f}분)")
+    logger.info(f"총 소요 시간: {overall_elapsed_time:.1f}초 ({overall_elapsed_time / 60:.1f}분)")
 
     if overall_data['summary'].get('token_usage'):
         usage = overall_data['summary']['token_usage']
@@ -231,7 +236,7 @@ def ask(
     else:
         system_prompt = PHYSICS_SYSTEM_PROMPT_KO if lang == "ko" else PHYSICS_SYSTEM_PROMPT_EN
         logger.info("정답만 모드")
-    
+
     user_prompt = PHYSICS_USER_PROMPT.format(question=question)
 
     # LLM 호출
