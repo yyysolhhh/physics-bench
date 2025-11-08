@@ -154,14 +154,36 @@ python main.py run --provider ollama --model llama3.1:8b --lang en
 - `--lang`: 프롬프트 언어 선택 (기본값: ko, 선택: ko/en)
 - `--verbose`: 상세한 출력 표시 (기본값: true)
 
+### 3. 단일 문제 테스트
+
+```zsh
+# 기본 실행 (정답만)
+python main.py ask --provider ollama --model qwen2.5-math:7b --lang ko
+
+# 풀이 과정 포함
+python main.py ask --provider ollama --model qwen2.5-math:7b --lang ko --with-solution
+
+# 질문 직접 입력
+python main.py ask --provider ollama --model qwen2.5-math:7b --question "질문 내용"
+```
+
+**ask 명령어 옵션:**
+
+- `--provider`: 모델 제공자 (기본값: gemini)
+- `--model`: 모델 이름 (Ollama 사용 시 필수)
+- `--temperature`: 샘플링 온도 (기본값: 0.0)
+- `--max-tokens`: 최대 토큰 (선택)
+- `--lang`: 프롬프트 언어 선택 (기본값: ko, 선택: ko/en)
+- `--with-solution`: 풀이 과정 포함 여부 (기본값: false)
+- `--question`, `-q`: 질문 내용 (미지정 시 입력 요청)
+
 ## 결과 파일
 
-실행 후 `outputs/모델명/날짜시간/` 폴더에 다음 파일들이 생성됩니다:
+실행 후 `outputs/{모델명}/{YYYYMMDD_HHMMSS}/` 폴더에 다음 파일들이 생성됩니다:
 
-- `overall_results.json`: 전체 벤치마크 결과 (토큰 사용량 포함)
-- `과목별폴더/benchmark.log`: 과목별 로그 파일
-- `과목별폴더/results.json`: 과목별 상세 결과
-- `과목별폴더/results.json`: 과목별 상세 결과
+- `overall_results.json`: 전체 벤치마크 결과 (토큰 사용량, 과목별/도메인별/주제별/답변타입별/난이도별 통계 포함)
+- `{과목명}/{과목명}_{YYYYMMDD_HHMMSS}.log`: 과목별 로그 파일
+- `{과목명}/results.json`: 과목별 상세 결과 (각 문제별 답변, 정오 판정 등)
 
 ## 데이터셋 출처 및 인용
 
