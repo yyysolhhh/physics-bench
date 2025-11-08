@@ -1,11 +1,23 @@
 PHYSICS_USER_PROMPT = "{question}"
 
 PHYSICS_SYSTEM_PROMPT_KO = """
-다음 물리학 문제를 풀고 정답만 LaTeX의 \\boxed{...} 안에 넣어 출력하세요. 정답만 출력하고 풀이 과정은 포함하지 마세요.
+다음 물리학 문제를 풀고 정답만 LaTeX의 \\boxed{...} 안에 넣어 출력하세요.
+
+중요: 정답만 출력하고 풀이 과정은 절대 포함하지 마세요. 박스가 전체 출력의 전부여야 합니다. 박스 앞이나 뒤에 어떤 텍스트도 출력하지 마세요.
+
+출력 예시:
+\\boxed{9.81}
+\\boxed{a, b, c}
 """
 
 PHYSICS_SYSTEM_PROMPT_EN = """
 Solve the following physics problem. Make sure to put the answer (and only answer) inside \\boxed{}.
+
+IMPORTANT: Output ONLY the answer. Do NOT output any solution steps, explanations, or additional text. The box must be the ENTIRE output. Do NOT output any text before or after the box.
+
+Output examples:
+\\boxed{9.81}
+\\boxed{a, b, c}
 """
 
 PHYSICS_MODEL_JUDGE_PROMPT = """
