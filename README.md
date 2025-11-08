@@ -91,11 +91,11 @@ ollama pull llama3.1:8b
 ### 2. 벤치마크 실행
 
 ```bash
-# 특정 모델로 실행
-python main.py run --provider ollama --model qwen2.5-math:7b
+# 특정 모델로 실행 (언어 선택: ko/en)
+python main.py run --provider ollama --model qwen2.5-math:7b --lang ko
 
 # 다른 옵션과 함께
-python main.py run --provider ollama --model llama3.1:8b --limit 5 --temperature 0.7
+python main.py run --provider ollama --model llama3.1:8b --limit 5 --temperature 0.7 --lang en
 ```
 
 ### 3. 설치된 모델 확인
@@ -133,15 +133,15 @@ python main.py download {데이터셋 이름} validation --limit 100
 python main.py run
 
 # 옵션 사용
-python main.py run --provider qwen --limit 10
+python main.py run --provider qwen --limit 10 --lang en
 python main.py run --provider openai --limit 10
 python main.py run --provider anthropic --limit 10
 
 # Ollama 모델 사용
 python main.py run --provider ollama --model qwen2.5-math:7b --limit 5
-python main.py run --provider ollama --model qwen3:8b
-python main.py run --provider ollama --model gemma3:4b --limit 10
-python main.py run --provider ollama --model llama3.1:8b
+python main.py run --provider ollama --model qwen3:8b --lang en
+python main.py run --provider ollama --model gemma3:4b --limit 10 --lang ko
+python main.py run --provider ollama --model llama3.1:8b --lang en
 ```
 
 **run 명령어 옵션:**
@@ -151,7 +151,7 @@ python main.py run --provider ollama --model llama3.1:8b
 - `--limit`: 각 과목마다 상위 N개로 제한 (선택)
 - `--temperature`: 샘플링 온도 (기본값: 0.0)
 - `--max-tokens`: 최대 토큰 (선택)
-- `--prompt`: 프롬프트 스타일 (기본값: numerical, 선택: simple/benchmark/detailed/numerical)
+- `--lang`: 프롬프트 언어 선택 (기본값: ko, 선택: ko/en)
 - `--verbose`: 상세한 출력 표시 (기본값: true)
 
 ## 결과 파일

@@ -1,6 +1,5 @@
 import asyncio
 import json
-import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,12 +34,13 @@ def _make_llm(spec: ModelSpec) -> BaseLLMClient:
 
 class BenchmarkRunner:
     def __init__(self, model_spec: ModelSpec, prompt_template, verbose: bool = False, log_file: Optional[str] = None,
-                 concurrency: int = 8):
+                 concurrency: int = 8, solution_prompt_template: Optional[str] = None):
         self.model_spec = model_spec
         self.evaluator = PhysicsEvaluator()
         self.console = Console()
         self.verbose = verbose
         self.system_prompt = prompt_template
+        self.solution_system_prompt = solution_prompt_template
         self.user_prompt_template = PHYSICS_USER_PROMPT
 
         self.log_file = log_file
@@ -53,9 +53,7 @@ class BenchmarkRunner:
         llm = _make_llm(self.model_spec)
 
         total_items = len(items)
-        y_true: list[str] = [getattr(item, 'answer', '') for item in items]
-        y_pred: list[str] = [""] * total_items
-        detailed_results: list[Optional[dict]] = [None] * total_items
+        detailed_results: list[Optional[dict]] = [None for _ in range(total_items)]
 
         self.logger.info(f"벤치마크 시작 - 총 {total_items}개 문제")
         self.logger.info(f"모델: {self.model_spec.provider}/{self.model_spec.model}")
@@ -67,27 +65,70 @@ class BenchmarkRunner:
                 async with sem:
                     try:
                         user_prompt = self.user_prompt_template.format(question=item.question)
-                        answer = await asyncio.to_thread(
+                        # 1단계: 정답만 수집
+                        answer_only = await asyncio.to_thread(
                             llm.generate_answer,
                             self.system_prompt,
                             user_prompt,
                         )
-                        cleaned_answer = self._clean_answer(answer)
-                        is_correct = self.evaluator.evaluate_single(cleaned_answer, item.answer)
+                        # 1차 자동판정 (정답만, 규칙 기반)
+                        is_correct, pred_list, gt_list = self.evaluator.evaluate_first_stage(
+                            answer_only, item.answer
+                        )
+                        # 1차에서 평가에 쓰이는 정답만 (\boxed{...} 형식)
+                        answer_extracted = getattr(self.evaluator, 'last_extracted_pred', None)
+
+                        solution_text = None
+                        student_solution_for_eval = None  # 2차 평가에 사용된 student_solution (풀이만)
+                        student_answers_for_eval = None  # 2차 평가에 사용된 student_answers (정답만)
+
+                        # 필요 시 2단계: 풀이 요청 후 평가
+                        if not is_correct:
+                            # 참고 해설 추출 (UGPhysics 데이터셋의 solution 필드, 2차 판정에서만 사용)
+                            reference_solution = getattr(item, 'solution', None) or ""
+
+                            solution_text = await asyncio.to_thread(
+                                llm.generate_answer,
+                                self.solution_system_prompt,
+                                user_prompt,
+                            )
+                            # 2차 답 전체를 콘솔에 임시 출력
+                            print(f"[DEBUG] 2차 답 전체: {solution_text}")
+
+                            is_correct = self.evaluator.evaluate_second_stage(
+                                question=item.question,
+                                predicted_raw=answer_only,
+                                ground_truth_raw=item.answer,
+                                pred_list=pred_list,
+                                gt_list=gt_list,
+                                student_solution=solution_text,
+                                reference_solution=reference_solution,
+                            )
+                            # 2차 평가에 사용된 student_solution과 student_answers 가져오기
+                            student_solution_for_eval = getattr(self.evaluator, 'last_student_solution', None)
+                            student_answers_for_eval = getattr(self.evaluator, 'last_student_answers', None)
                         item_id = getattr(item, 'id', getattr(item, 'index', i + 1))
                         self.logger.info(
-                            f"ID:{item_id} | 결과:{'정답' if is_correct else '오답'} | LLM답변:{cleaned_answer} | 정답:{item.answer} | 질문:{item.question}"
+                            f"ID:{item_id} | 결과:{'정답' if is_correct else '오답'} | 1차답:{answer_only} | 2차풀이:{'있음' if solution_text else '없음'} | 정답:{item.answer}"
                         )
                         detailed_results[i] = {
                             'id': item_id,
                             'problem_id': getattr(item, 'problemid', ''),
                             'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
+                            'domain': getattr(item, 'domain', ''),
+                            'subject': getattr(item, 'subject', ''),
+                            'topic': getattr(item, 'topic', ''),
+                            'answer_type': getattr(item, 'answer_type', ''),
+                            'level': getattr(item, 'level', ''),
                             'question': item.question,
                             'ground_truth': item.answer,
-                            'predicted': cleaned_answer,
+                            'answer_only_raw': answer_only,  # 1차 LLM 답 전체
+                            'answer_extracted': answer_extracted,  # 1차에서 평가에 쓰이는 정답만
+                            'student_solution': student_solution_for_eval,  # 2차 평가에 사용된 student_solution (풀이만)
+                            'student_answers': student_answers_for_eval,  # 2차 평가에 사용된 student_answers (정답만)
+                            'model_judge_msg': getattr(self.evaluator, 'last_model_judge_msg', None),
                             'is_correct': is_correct,
                         }
-                        y_pred[i] = cleaned_answer
                     except Exception as e:
                         item_id = getattr(item, 'id', getattr(item, 'index', i + 1))
                         error_msg = f"ID:{item_id} | 에러: {str(e)}"
@@ -96,13 +137,20 @@ class BenchmarkRunner:
                             'id': item_id,
                             'problem_id': getattr(item, 'problemid', ''),
                             'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
+                            'domain': getattr(item, 'domain', ''),
+                            'subject': getattr(item, 'subject', ''),
+                            'topic': getattr(item, 'topic', ''),
+                            'answer_type': getattr(item, 'answer_type', ''),
+                            'level': getattr(item, 'level', ''),
                             'question': item.question,
                             'ground_truth': item.answer,
-                            'predicted': f"ERROR: {str(e)}",
+                            'answer_only_raw': None,
+                            'answer_extracted': None,
+                            'student_solution': None,
+                            'student_answers': None,
+                            'model_judge_msg': None,
                             'is_correct': False,
                         }
-                        y_pred[i] = "ERROR"
-                    finally:
                         progress.advance(task)
 
             async with asyncio.TaskGroup() as tg:
@@ -113,7 +161,9 @@ class BenchmarkRunner:
             task = progress.add_task("진행중...", total=total_items)
             asyncio.run(_process_all())
 
-        result = self.evaluator.evaluate(y_true=y_true, y_pred=y_pred)
+        completed_results = [r for r in detailed_results if r is not None]
+        total_correct = sum(1 for r in completed_results if r.get('is_correct', False))
+        result = EvaluationResult(total=len(completed_results), correct=total_correct)
 
         elapsed_time = time.time() - self.start_time
 
@@ -133,52 +183,6 @@ class BenchmarkRunner:
             self._save_results_json(result, [r for r in detailed_results if r is not None], elapsed_time, usage_stats)
 
         return result, [r for r in detailed_results if r is not None]
-
-    def _clean_answer(self, answer: str) -> str:
-        """LLM 답변에서 수치와 단위 추출하여 정리"""
-        # 1. "답:" 패턴 찾기 (우선순위)
-        answer_patterns = [
-            r'답:\s*([^\n]+)',
-            r'Answer:\s*([^\n]+)',
-            r'최종\s*답:\s*([^\n]+)',
-            r'정답:\s*([^\n]+)',
-            r'결과:\s*([^\n]+)',
-            r'Final\s*Answer:\s*([^\n]+)',
-        ]
-
-        for pattern in answer_patterns:
-            match = re.search(pattern, answer, re.IGNORECASE)
-            if match:
-                cleaned = match.group(1).strip()
-                # 추가 정리
-                cleaned = re.sub(r'^[-=*]\s*', '', cleaned)  # 앞의 기호 제거
-                cleaned = re.sub(r'\s*[-=*]\s*$', '', cleaned)  # 뒤의 기호 제거
-                return cleaned
-
-        # 2. "답:" 없이 수치와 단위가 포함된 줄 찾기
-        lines = answer.strip().split('\n')
-        for line in reversed(lines):
-            line = line.strip()
-            # 숫자와 단위가 모두 포함된 줄 찾기
-            if re.search(r'-?\d+\.?\d*\s*[a-zA-Z°]+', line):
-                cleaned = re.sub(r'^[-=*]\s*', '', line)
-                cleaned = re.sub(r'\s*[-=*]\s*$', '', cleaned)
-                return cleaned
-
-        # 3. 숫자만 포함된 줄 찾기
-        for line in reversed(lines):
-            line = line.strip()
-            if re.search(r'-?\d+\.?\d*', line) and len(line) < 50:  # 너무 긴 줄 제외
-                cleaned = re.sub(r'^[-=*]\s*', '', line)
-                cleaned = re.sub(r'\s*[-=*]\s*$', '', cleaned)
-                return cleaned
-
-        # 4. 마지막으로 전체 답변에서 수치 추출
-        numbers = re.findall(r'-?\d+\.?\d*', answer)
-        if numbers:
-            return numbers[-1]
-
-        return answer.strip()
 
     def _print_detailed_stats(self, result: EvaluationResult, detailed_results: list):
         """상세 통계 출력"""

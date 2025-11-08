@@ -1,43 +1,70 @@
-PHYSICS_TUTOR_SYSTEM_PROMPT = ""
+PHYSICS_USER_PROMPT = "{question}"
 
-PHYSICS_USER_PROMPT = "Question: {question}"
-
-# 간단한 물리학 프롬프트 (수치 계산 강조)
-PHYSICS_NUMERICAL_PROMPT = """물리학 문제를 해결해주세요.
-
-답변 형식:
-- 수학 기호는 최대한 계산하여 숫자로 변환
-- 복잡한 수식은 단계별로 계산하여 최종 숫자 도출
-- 최종 답변은 "답: {수치} {단위}" 형태로 제시
-- 숫자와 단위를 $로 묶지 말고 공백으로 구분
-- 단위는 latex 문법으로 표시
-- 답변에는 오직 최종 답만 포함하고 풀이 과정은 생략
+PHYSICS_SYSTEM_PROMPT_KO = """
+다음 물리학 문제를 풀고 정답만 LaTeX의 \\boxed{...} 안에 넣어 출력하세요. 정답만 출력하고 풀이 과정은 포함하지 마세요.
 """
 
-PHYSICS_EVALUATION_PROMPT = """
-당신은 물리학 문제 채점 전문가입니다. 아래 입력을 보고 예측 답변이 정답과 의미적으로 동일한지 판단하세요.
-
-요구사항:
-- 수학적 등가성, 단위 변환, 소수점 반올림은 허용 범위 내에서 동일로 간주
-- 단, 문제에서 특정 형식(예: 단위, 유효자리수)이 강제된 경우 이를 우선 적용
-- 복잡한 정규화는 하지 말고, 필요한 최소한의 비교로 판정
-
-출력 형식(반드시 다음의 한 줄 JSON만 출력):
-{"is_correct": true|false, "reason": "간단 근거"}
-
-입력:
-- Question: {question}
-- GroundTruth: {ground_truth}
-- Predicted: {predicted}
+PHYSICS_SYSTEM_PROMPT_EN = """
+Solve the following physics problem. Make sure to put the answer (and only answer) inside \\boxed{}.
 """
 
-# 물리학 벤치마크용 프롬프트
-PHYSICS_BENCHMARK_PROMPT = """
+PHYSICS_MODEL_JUDGE_PROMPT = """
+# CONTEXT #
+I am a teacher, and I have some undergraduate-level physics problems. I am tasked with evaluating the correctness of a student's answer. Below, I am provided with a problem, a reference solution, and the reference final answer(s). Additionally, a student's solution together with their final answer(s) is provided. My job is to assess whether the student's answer captures the same meaning as the reference answer, even when expressed with different wording or format.
+
+# OBJECTIVE #
+I need you to judge whether the student's answer is correct given the ground truth answer.
+
+Your tasks include:
+A. Identify Mathematical or Notational Equivalence: Pay special attention to any LaTeX expressions in both answers. Confirm that the mathematical relationships, variables, and operations conveyed are equivalent.
+B. Consider Physical Equivalence: Pay special attention to transferring the units of both answers and equivalent variables given in the problem description. Feel free to ignore some physical constants appropriately.
+C. Provide a Justification: Conclude with a brief explanation as to why you believe the student's output is correct or incorrect, highlighting any key differences in meaning or content.
+
+# STYLE #
+Teaching report.
+
+# TONE #
+Professional, scientific.
+
+# AUDIENCE #
+Students. Enable them to better understand whether the answer they produce is correct.
+
+# RESPONSE: MARKDOWN REPORT #
+## Equivalence Judgement
+[Whether the student's answer share the same meaning with the reference answer. (TRUE or FALSE)]
+## Justification
+[Conclude with a brief explanation as to why you believe the student's answer is correct or incorrect.]
+
+# ATTENTION #
+- The reference solution is ALWAYS correct. The reference final answer is extracted from the reference solution by certain rules, and may sometimes not capture all the meaning of the reference solution. You should carefully judge whether the student gives the same final answer as the reference answer based on corresponding solutions.
+- The Equivalence Judgement is only TRUE or FALSE. The answer is TRUE whenever the student's final answer is physically equivalent to the reference one.
+- Do not hesitate to refer to the corresponding solutions to determine physical equivalence of the final answers if appropriately.
+- Minor formatting differences, rounding within reasonable tolerance, equivalent units, and algebraically equivalent expressions should be considered correct.
+- Add "=== report over ===" at the end of the report.
+
+<physics solution>
+**Question**:
+{question}
+
+**Reference Solution**:
+{reference_solution}
+
+**Reference Answer(s)**:
+{reference_answers}
+
+**Student Solution**:
+{student_solution}
+
+**Student Answer(s)**:
+{student_answers}
+
+</physics solution>
 """
 
-# 간단한 물리학 프롬프트 (빠른 평가용)
-PHYSICS_SIMPLE_PROMPT = """
+PHYSICS_SOLUTION_PROMPT_KO = """
+다음은 대학 수준 물리학 문제입니다. 주어진 요구사항과 정보에 따라 답을 계산하세요. 풀이 과정에서 사용된 변수와 공식, 결과는 LaTeX 형식을 사용하여 표현하세요. 풀이의 마지막에 "So the final answer is \\boxed{answer}." 형식으로 결과를 명시적으로 제시하세요.
 """
 
-PHYSICS_DETAILED_PROMPT = """
+PHYSICS_SOLUTION_PROMPT_EN = """
+The following is an undergraduate-level physics problem. Please calculate the answer according to the given requirements and the information provided. Please use LaTeX format to represent the variables and formulas used in the solution process and results. Please end your solution with "So the final answer is \\boxed{answer}." and give the result explicitly.
 """
