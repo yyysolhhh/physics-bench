@@ -1,8 +1,11 @@
 import json
+import logging
 from pathlib import Path
 from typing import Optional, Any
 
 from datasets import load_dataset, load_dataset_builder
+
+logger = logging.getLogger(__name__)
 
 
 def _ensure_dataset_dir() -> Path:
@@ -74,7 +77,7 @@ def download_huggingface_dataset(
     if not output_path.is_absolute():
         output_path = base_dir / output_path
 
-    print(f"Hugging Face에서 '{dataset_name} ({split})' 다운로드 중... ")
+    logger.info(f"Hugging Face에서 '{dataset_name} ({split})' 다운로드 중... ")
     items = _collect_items(dataset_name=dataset_name, split=split, limit=limit)
 
     _write_json(output_path, items)
@@ -95,5 +98,5 @@ def download_huggingface_dataset(
 
     _write_json(meta_index_path, meta_index)
 
-    print(f"{len(items)}개 항목 다운로드 완료: {output_path}")
-    print(f"메타데이터 누적 저장: {meta_index_path}")
+    logger.info(f"{len(items)}개 항목 다운로드 완료: {output_path}")
+    logger.info(f"메타데이터 누적 저장: {meta_index_path}")

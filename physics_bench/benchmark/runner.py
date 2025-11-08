@@ -1,11 +1,12 @@
 import asyncio
 import json
+import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Any
 
-from rich.console import Console
+# from rich.console import Console
 from rich.progress import Progress
 
 from physics_bench.llm import LLMRegistry
@@ -37,14 +38,15 @@ class BenchmarkRunner:
                  concurrency: int = 8, solution_prompt_template: Optional[str] = None):
         self.model_spec = model_spec
         self.evaluator = PhysicsEvaluator()
-        self.console = Console()
+        # self.console = Console()  # 주석처리: Console 사용 안함
         self.verbose = verbose
         self.system_prompt = prompt_template
         self.solution_system_prompt = solution_prompt_template
         self.user_prompt_template = PHYSICS_USER_PROMPT
 
         self.log_file = log_file
-        self.logger = setup_benchmark_logger(log_file)
+        self.logger = setup_benchmark_logger(log_file)  # 파일 저장 가능한 로거 (벤치마크 진행 상황용)
+        self.console_logger = logging.getLogger(__name__)  # 콘솔에만 출력하는 로거 (결과 출력용)
         self.start_time = None
         self.concurrency = max(1, int(concurrency))
 
@@ -93,7 +95,7 @@ class BenchmarkRunner:
                                 user_prompt,
                             )
                             # 2차 답 전체를 콘솔에 임시 출력
-                            print(f"[DEBUG] 2차 답 전체: {solution_text}")
+                            # print(f"[DEBUG] 2차 답 전체: {solution_text}")
 
                             is_correct = self.evaluator.evaluate_second_stage(
                                 question=item.question,
@@ -185,11 +187,11 @@ class BenchmarkRunner:
         return result, [r for r in detailed_results if r is not None]
 
     def _print_detailed_stats(self, result: EvaluationResult, detailed_results: list):
-        """상세 통계 출력"""
-        self.console.print(f"\n[bold green]=== 벤치마크 결과 ===[/bold green]")
-        self.console.print(f"총 문제 수: {result.total}")
-        self.console.print(f"정답 수: {result.correct}")
-        self.console.print(f"정확도: {result.accuracy:.2%}")
+        """상세 통계 출력 (콘솔에만 출력)"""
+        self.console_logger.info(f"\n=== 벤치마크 결과 ===")
+        self.console_logger.info(f"총 문제 수: {result.total}")
+        self.console_logger.info(f"정답 수: {result.correct}")
+        self.console_logger.info(f"정확도: {result.accuracy:.2%}")
 
         source_stats = {}
         for item in detailed_results:
@@ -201,10 +203,10 @@ class BenchmarkRunner:
                 source_stats[source]['correct'] += 1
 
         if len(source_stats) > 1:
-            self.console.print(f"\n[bold red]Source별 성능:[/bold red]")
+            self.console_logger.info(f"\nSource별 성능:")
             for source, stats in source_stats.items():
                 accuracy = stats['correct'] / stats['total'] if stats['total'] > 0 else 0
-                self.console.print(f"  {source}: {stats['correct']}/{stats['total']} ({accuracy:.2%})")
+                self.console_logger.info(f"  {source}: {stats['correct']}/{stats['total']} ({accuracy:.2%})")
 
     def _save_results_json(self, result: EvaluationResult, detailed_results: list, elapsed_time: float,
                            usage_stats: Optional[dict] = None):

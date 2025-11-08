@@ -1,10 +1,11 @@
 import json
+import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import typer
-from rich import print
 
 from physics_bench.benchmark import ModelSpec, BenchmarkRunner
 from physics_bench.dataset import (
@@ -20,7 +21,13 @@ from physics_bench.prompts import (
     PHYSICS_USER_PROMPT
 )
 from physics_bench.utils.config import get_env
-from physics_bench.utils.logging_config import generate_log_filename
+from physics_bench.utils.logging_config import generate_log_filename, setup_console_logging
+
+# 애플리케이션 시작 시 로깅 설정 (콘솔에만 출력)
+setup_console_logging()
+
+# 메인 로거
+logger = logging.getLogger(__name__)
 
 app = typer.Typer()
 
@@ -58,35 +65,40 @@ def run(
 
     spec = ModelSpec(provider=provider, model=model_name, temperature=temperature, max_tokens=max_tokens)
 
-    base_log_file = generate_log_filename(model_name=model_name)
-    base_output_dir = Path(base_log_file).parent
+    # 출력 디렉토리 설정 (JSON 결과 저장용)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_output_dir = Path("outputs") / model_name / timestamp
+    base_output_dir.mkdir(parents=True, exist_ok=True)
 
     multi_loader = UGPhysicsMultiSubjectLoader(Path("dataset") / "ugphysics")
     all_subjects_data = multi_loader.load_all_subjects(language="en", limit_per_subject=limit)
 
-    print(f"UGPhysics 로드 완료: {len(all_subjects_data)}개 과목")
+    logger.info(f"UGPhysics 로드 완료: {len(all_subjects_data)}개 과목")
 
     subject_reports = {}
     all_detailed_results = []  # 모든 과목의 상세 결과 수집
 
+    # 전체 벤치마크 시작 시간 기록
+    overall_start_time = time.time()
+
     # 각 과목별로 실행
     for subject_name, subject_items in all_subjects_data.items():
-        print(f"\n[bold cyan]=== {subject_name} 실행 중 ===[/bold cyan]")
-
-        run_timestamp = base_output_dir.name  # YYYYMMDD_HHMMSS
-        subject_log_file = str(base_output_dir / subject_name / f"{subject_name}_{run_timestamp}.log")
+        logger.info(f"\n=== {subject_name} 실행 중 ===")
 
         runner = BenchmarkRunner(
             model_spec=spec,
             prompt_template=system_prompt,
             verbose=verbose,
-            log_file=subject_log_file,
+            log_file=None,  # 파일 저장하지 않음, 콘솔에만 출력
             solution_prompt_template=solution_prompt,
         )
         report, detailed_results = runner.run_with_items(subject_items)
 
         subject_reports[subject_name] = report
         all_detailed_results.extend(detailed_results)
+
+    # 전체 벤치마크 종료 시간 계산
+    overall_elapsed_time = time.time() - overall_start_time
 
     # 전체 결과 계산
     total_correct = sum(r.correct for r in subject_reports.values())
@@ -128,7 +140,8 @@ def run(
             'total_problems': total_items,
             'total_correct': total_correct,
             'overall_accuracy': round(overall_accuracy, 4),
-            'subject_count': len(subject_reports)
+            'subject_count': len(subject_reports),
+            'total_elapsed_time_seconds': round(overall_elapsed_time, 2)
         },
         'subject_statistics': {
             subject: {
@@ -147,14 +160,15 @@ def run(
     with open(overall_json_path, 'w', encoding='utf-8') as f:
         json.dump(overall_data, f, ensure_ascii=False, indent=2)
 
-    print(f"\n[bold green]=== 전체 결과 ===[/bold green]")
-    print(f"[bold]전체 결과 파일: {overall_json_path}[/bold]")
-    print(f"[bold]최종 결과: {total_correct}/{total_items} (정확도 {overall_accuracy * 100:.2f}%)[/bold]")
+    logger.info(f"\n=== 전체 결과 ===")
+    logger.info(f"전체 결과 파일: {overall_json_path}")
+    logger.info(f"최종 결과: {total_correct}/{total_items} (정확도 {overall_accuracy * 100:.2f}%)")
+    logger.info(f"총 소요 시간: {overall_elapsed_time:.1f}초 ({overall_elapsed_time/60:.1f}분)")
 
     if overall_data['summary'].get('token_usage'):
         usage = overall_data['summary']['token_usage']
-        print(
-            f"[bold cyan]토큰 사용량: Total={usage.get('total_tokens', 0)}, Prompt={usage.get('prompt_tokens', 0)}, Completion={usage.get('completion_tokens', 0)}[/bold cyan]")
+        logger.info(
+            f"토큰 사용량: Total={usage.get('total_tokens', 0)}, Prompt={usage.get('prompt_tokens', 0)}, Completion={usage.get('completion_tokens', 0)}")
 
 
 @app.command("ask")
@@ -197,9 +211,9 @@ def ask(
             temperature=spec.temperature,
             max_tokens=spec.max_tokens
         )
-        print(f"[bold]Provider: {spec.provider}, Model: {spec.model}[/bold]\n")
+        logger.info(f"Provider: {spec.provider}, Model: {spec.model}\n")
     except Exception as e:
-        print(f"[bold red]❌ LLM 클라이언트 생성 실패: {e}[/bold red]")
+        logger.error(f"❌ LLM 클라이언트 생성 실패: {e}")
         raise typer.Exit(1)
 
     # 질문 입력
@@ -207,40 +221,40 @@ def ask(
         question = typer.prompt("질문을 입력하세요")
 
     if not question.strip():
-        print("[bold red]❌ 질문이 비어있습니다.[/bold red]")
+        logger.error("❌ 질문이 비어있습니다.")
         raise typer.Exit(1)
 
     # 프롬프트 구성
     if with_solution:
         system_prompt = PHYSICS_SOLUTION_PROMPT_KO if lang == "ko" else PHYSICS_SOLUTION_PROMPT_EN
-        print("[bold cyan]풀이 과정 포함 모드[/bold cyan]")
+        logger.info("풀이 과정 포함 모드")
     else:
         system_prompt = PHYSICS_SYSTEM_PROMPT_KO if lang == "ko" else PHYSICS_SYSTEM_PROMPT_EN
-        print("[bold cyan]정답만 모드[/bold cyan]")
+        logger.info("정답만 모드")
     
     user_prompt = PHYSICS_USER_PROMPT.format(question=question)
 
     # LLM 호출
     try:
-        print("[bold cyan]답변 생성 중...[/bold cyan]")
+        logger.info("답변 생성 중...")
         response = llm_client.generate_answer(
             system_prompt=system_prompt,
             user_prompt=user_prompt
         )
 
         # 답변 출력
-        print("\n" + "=" * 50)
-        print("[bold green]답변:[/bold green]")
-        print(response)
-        print("=" * 50)
+        logger.info("\n" + "=" * 50)
+        logger.info("답변:")
+        logger.info(response)
+        logger.info("=" * 50)
 
         # 사용량 통계 출력
         usage_stats = llm_client.get_usage_stats()
         if usage_stats:
-            print(f"\n[bold cyan]토큰 사용량:[/bold cyan] {usage_stats}")
+            logger.info(f"\n토큰 사용량: {usage_stats}")
 
     except Exception as e:
-        print(f"[bold red]❌ 오류 발생: {e}[/bold red]")
+        logger.error(f"❌ 오류 발생: {e}")
         raise typer.Exit(1)
 
 
@@ -260,7 +274,7 @@ def download(
             limit=limit
         )
     except Exception as e:
-        print(f"다운로드 실패: {e}")
+        logger.error(f"다운로드 실패: {e}")
         raise typer.Exit(1)
 
 

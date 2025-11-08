@@ -4,8 +4,30 @@ from pathlib import Path
 from typing import Optional
 
 
+def setup_console_logging():
+    """모든 로거가 콘솔에만 출력되도록 기본 설정"""
+    # 루트 로거 설정
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # 기존 핸들러 제거
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # 콘솔 핸들러만 추가
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+
+
 def setup_benchmark_logger(log_file: Optional[str] = None) -> logging.Logger:
-    """벤치마크용 로거 설정"""
+    """벤치마크용 로거 설정
+    
+    Args:
+        log_file: 로그 파일 경로. None이면 콘솔에만 출력, 제공되면 파일에도 저장
+    """
     logger = logging.getLogger('benchmark')
     logger.setLevel(logging.INFO)
 
@@ -13,9 +35,8 @@ def setup_benchmark_logger(log_file: Optional[str] = None) -> logging.Logger:
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
 
+    # 콘솔 핸들러 추가
     formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%H:%M:%S')
-
-    # 콘솔 핸들러
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)

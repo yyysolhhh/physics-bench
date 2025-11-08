@@ -1,9 +1,12 @@
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator, Optional
 
 from .base_loader import DatasetLoader
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -53,7 +56,7 @@ class UGPhysicsDatasetLoader(DatasetLoader):
                 try:
                     yield json.loads(line)
                 except json.JSONDecodeError as e:
-                    print(f"JSON 파싱 오류 (라인 건너뜀): {e}")
+                    logger.warning(f"JSON 파싱 오류 (라인 건너뜀): {e}")
                     continue
 
     def load(self, limit: Optional[int] = None) -> list[UGPhysicsItem]:
@@ -154,6 +157,6 @@ class UGPhysicsMultiSubjectLoader:
             try:
                 results[subject] = self.load_subject(subject, language, limit_per_subject)
             except FileNotFoundError:
-                print(f"경고: {subject} 파일을 찾을 수 없습니다.")
+                logger.warning(f"경고: {subject} 파일을 찾을 수 없습니다.")
                 results[subject] = []
         return results
