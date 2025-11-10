@@ -3,7 +3,8 @@ textbook*
 *.json
 *.jsonl
 dataset/ugphysics
-sequence_diagam.drawio
+*.drawio
+*.xlsx
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,pycharm+all,venv,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,pycharm+all,venv,python
