@@ -4,8 +4,12 @@ from pathlib import Path
 from typing import Optional
 
 
-def setup_console_logging():
-    """모든 로거가 콘솔에만 출력되도록 기본 설정"""
+def setup_console_logging(log_file: Optional[str] = None):
+    """모든 로거가 콘솔에 출력되도록 기본 설정 (선택적으로 파일에도 저장)
+    
+    Args:
+        log_file: 로그 파일 경로. None이면 콘솔에만 출력, 제공되면 파일에도 저장
+    """
     # 루트 로거 설정
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
@@ -14,12 +18,23 @@ def setup_console_logging():
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     
-    # 콘솔 핸들러만 추가
+    # 콘솔 핸들러 추가
+    console_formatter = logging.Formatter('%(message)s')
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s')
-    console_handler.setFormatter(formatter)
+    console_handler.setFormatter(console_formatter)
     root_logger.addHandler(console_handler)
+    
+    # 파일 핸들러 (선택사항)
+    if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setLevel(logging.INFO)
+        file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        file_handler.setFormatter(file_formatter)
+        root_logger.addHandler(file_handler)
 
 
 def setup_benchmark_logger(log_file: Optional[str] = None) -> logging.Logger:

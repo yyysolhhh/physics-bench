@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,7 +34,7 @@ def _make_llm(spec: ModelSpec) -> BaseLLMClient:
 
 class BenchmarkRunner:
     def __init__(self, model_spec: ModelSpec, prompt_template, verbose: bool = False, log_file: Optional[str] = None,
-                 concurrency: int = 8, solution_prompt_template: Optional[str] = None):
+                 concurrency: int = 1, solution_prompt_template: Optional[str] = None):
         self.model_spec = model_spec
         self.evaluator = PhysicsEvaluator()
         # self.console = Console()  # 주석처리: Console 사용 안함
@@ -48,8 +47,18 @@ class BenchmarkRunner:
         self.logger = setup_benchmark_logger(log_file)  # 파일 저장 로거
         self.start_time = None
         self.concurrency = max(1, int(concurrency))
+        self.json_path = None
+        self.file_lock = asyncio.Lock()  # 파일 쓰기 동기화용
+        self.pending_results = []  # 배치 저장을 위한 대기 중인 결과
+        self.save_batch_size = 10  # 10개마다 저장
+        self.last_save_time = time.time()
+        self.save_interval = 30.0  # 30초마다 저장
+        if log_file:
+            log_path = Path(log_file)
+            self.json_path = log_path.parent / "results.json"
 
-    def run_with_items(self, items: list[Any]) -> tuple[EvaluationResult, list[dict]]:
+    def run_with_items(self, items: list[Any], existing_results_file: Optional[Path] = None) -> tuple[
+        EvaluationResult, list[dict]]:
         self.start_time = time.time()
         llm = _make_llm(self.model_spec)
 
@@ -112,7 +121,7 @@ class BenchmarkRunner:
                         self.logger.info(
                             f"ID:{item_id} | 결과:{'정답' if is_correct else '오답'} | 1차답:{answer_only} | 2차풀이:{'있음' if solution_text else '없음'} | 정답:{item.answer}"
                         )
-                        detailed_results[i] = {
+                        result_dict = {
                             'id': item_id,
                             'problem_id': getattr(item, 'problemid', ''),
                             'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
@@ -131,12 +140,17 @@ class BenchmarkRunner:
                             'is_correct': is_correct,
                             'error': None,  # 에러 없음
                         }
+                        detailed_results[i] = result_dict
+
+                        # 배치 저장 (10개마다 또는 30초마다)
+                        if self.json_path:
+                            await self._queue_result_for_save(result_dict, existing_results_file)
                     except Exception as e:
                         item_id = getattr(item, 'id', getattr(item, 'index', i + 1))
                         error_msg = f"ID:{item_id} | 에러: {str(e)}"
                         self.logger.error(error_msg)
-                        
-                        detailed_results[i] = {
+
+                        result_dict = {
                             'id': item_id,
                             'problem_id': getattr(item, 'problemid', ''),
                             'source': getattr(item, 'source', getattr(item, 'subject', 'Unknown')),
@@ -155,6 +169,12 @@ class BenchmarkRunner:
                             'is_correct': False,
                             'error': str(e),  # 에러 메시지 저장
                         }
+                        detailed_results[i] = result_dict
+
+                        # 배치 저장 (10개마다 또는 30초마다)
+                        if self.json_path:
+                            await self._queue_result_for_save(result_dict, existing_results_file)
+
                         progress.advance(task)
 
             async with asyncio.TaskGroup() as tg:
@@ -183,10 +203,128 @@ class BenchmarkRunner:
 
         self._print_detailed_stats(result, [r for r in detailed_results if r is not None])
 
+        # 남은 결과 모두 저장
+        if self.json_path and self.pending_results:
+            asyncio.run(self._flush_pending_results(existing_results_file))
+
+        # 최종 통계 업데이트
         if self.log_file:
-            self._save_results_json(result, [r for r in detailed_results if r is not None], elapsed_time, usage_stats)
+            self._update_results_json_summary([r for r in detailed_results if r is not None], elapsed_time, usage_stats,
+                                              existing_results_file)
 
         return result, [r for r in detailed_results if r is not None]
+
+    async def _queue_result_for_save(self, result_dict: dict, existing_results_file: Optional[Path] = None):
+        """결과를 대기열에 추가하고, 배치 크기나 시간 간격에 도달하면 저장"""
+        async with self.file_lock:
+            self.pending_results.append(result_dict)
+
+            current_time = time.time()
+            should_save = (
+                    len(self.pending_results) >= self.save_batch_size or
+                    (current_time - self.last_save_time) >= self.save_interval
+            )
+
+            if should_save:
+                await self._flush_pending_results_internal(existing_results_file)
+
+    async def _flush_pending_results(self, existing_results_file: Optional[Path] = None):
+        """대기 중인 모든 결과 저장"""
+        async with self.file_lock:
+            await self._flush_pending_results_internal(existing_results_file)
+
+    async def _flush_pending_results_internal(self, existing_results_file: Optional[Path] = None):
+        """내부 저장 로직 (락이 이미 획득된 상태에서 호출)"""
+        if not self.pending_results:
+            return
+
+        # 기존 결과 읽기
+        existing_results = []
+        existing_ids = set()
+
+        # 먼저 self.json_path에서 읽기 (이미 저장된 결과)
+        if self.json_path.exists():
+            try:
+                with open(self.json_path, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+                    if 'results' in existing_data:
+                        existing_results = existing_data['results']
+                        existing_ids = {str(r.get('id')) for r in existing_results if r.get('id') is not None}
+            except Exception:
+                pass
+
+        # self.json_path에 없으면 existing_results_file에서 읽기 (초기 실행 시)
+        if not existing_results and existing_results_file and existing_results_file.exists():
+            try:
+                with open(existing_results_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+                    if 'results' in existing_data:
+                        existing_results = existing_data['results']
+                        existing_ids = {str(r.get('id')) for r in existing_results if r.get('id') is not None}
+            except Exception:
+                pass
+
+        # 새 결과 추가 (중복 체크)
+        new_count = 0
+        for result_dict in self.pending_results:
+            result_id = result_dict.get('id')
+            if result_id is not None and str(result_id) not in existing_ids:
+                existing_results.append(result_dict)
+                existing_ids.add(str(result_id))
+                new_count += 1
+
+        if new_count > 0:
+            # 통계 재계산
+            total_correct = sum(1 for r in existing_results if r.get('is_correct', False))
+            total_items = len(existing_results)
+            overall_accuracy = total_correct / total_items if total_items > 0 else 0
+
+            # 메타데이터 및 통계 업데이트
+            metadata = {
+                'model_provider': self.model_spec.provider,
+                'model_name': self.model_spec.model,
+                'temperature': self.model_spec.temperature,
+                'max_tokens': self.model_spec.max_tokens,
+                'prompt_template': self.system_prompt[:100] + '...' if len(
+                    self.system_prompt) > 100 else self.system_prompt,
+            }
+
+            source_stats = {}
+            for item in existing_results:
+                source = item['source']
+                if source not in source_stats:
+                    source_stats[source] = {'total': 0, 'correct': 0}
+                source_stats[source]['total'] += 1
+                if item['is_correct']:
+                    source_stats[source]['correct'] += 1
+
+            output_data = {
+                'metadata': metadata,
+                'summary': {
+                    'total': total_items,
+                    'correct': total_correct,
+                    'accuracy': overall_accuracy,
+                },
+                'source_statistics': {
+                    source: {
+                        'total': stats['total'],
+                        'correct': stats['correct'],
+                        'accuracy': round(stats['correct'] / stats['total'], 4) if stats['total'] > 0 else 0
+                    }
+                    for source, stats in source_stats.items()
+                },
+                'results': existing_results
+            }
+
+            # 파일에 저장
+            with open(self.json_path, 'w', encoding='utf-8') as f:
+                json.dump(output_data, f, ensure_ascii=False, indent=2)
+
+            self.logger.info(f"결과 저장: {new_count}개 항목 추가 (총 {len(existing_results)}개)")
+
+        # 대기열 비우기
+        self.pending_results.clear()
+        self.last_save_time = time.time()
 
     def _print_detailed_stats(self, result: EvaluationResult, detailed_results: list):
         """상세 통계 출력"""
@@ -210,58 +348,57 @@ class BenchmarkRunner:
                 accuracy = stats['correct'] / stats['total'] if stats['total'] > 0 else 0
                 self.logger.info(f"  {source}: {stats['correct']}/{stats['total']} ({accuracy:.2%})")
 
-    def _save_results_json(self, result: EvaluationResult, detailed_results: list, elapsed_time: float,
-                           usage_stats: Optional[dict] = None):
-        """결과를 JSON 파일로 저장"""
-        if not self.log_file:
+    def _update_results_json_summary(self, detailed_results: list, elapsed_time: float,
+                                     usage_stats: Optional[dict] = None, existing_results_file: Optional[Path] = None):
+        """결과 JSON 파일의 통계만 업데이트 (각 항목은 이미 저장됨)"""
+        if not self.json_path or not self.json_path.exists():
             return
 
-        log_path = Path(self.log_file)
-        json_path = log_path.parent / "results.json"
+        try:
+            # 기존 파일 읽기
+            with open(self.json_path, 'r', encoding='utf-8') as f:
+                output_data = json.load(f)
 
-        metadata = {
-            'model_provider': self.model_spec.provider,
-            'model_name': self.model_spec.model,
-            'temperature': self.model_spec.temperature,
-            'max_tokens': self.model_spec.max_tokens,
-            'prompt_template': self.system_prompt[:100] + '...' if len(
-                self.system_prompt) > 100 else self.system_prompt,
-        }
+            # 통계 재계산
+            all_results = output_data.get('results', [])
+            total_correct = sum(1 for r in all_results if r.get('is_correct', False))
+            total_items = len(all_results)
+            overall_accuracy = total_correct / total_items if total_items > 0 else 0
 
-        summary = {
-            'total': result.total,
-            'correct': result.correct,
-            'accuracy': result.accuracy,
-            'elapsed_time_seconds': round(elapsed_time, 2)
-        }
+            # summary 업데이트
+            output_data['summary'] = {
+                'total': total_items,
+                'correct': total_correct,
+                'accuracy': overall_accuracy,
+                'elapsed_time_seconds': round(elapsed_time, 2)
+            }
 
-        if usage_stats:
-            summary['token_usage'] = usage_stats
+            if usage_stats:
+                output_data['summary']['token_usage'] = usage_stats
 
-        source_stats = {}
-        for item in detailed_results:
-            source = item['source']
-            if source not in source_stats:
-                source_stats[source] = {'total': 0, 'correct': 0}
-            source_stats[source]['total'] += 1
-            if item['is_correct']:
-                source_stats[source]['correct'] += 1
+            # source_statistics 재계산
+            source_stats = {}
+            for item in all_results:
+                source = item['source']
+                if source not in source_stats:
+                    source_stats[source] = {'total': 0, 'correct': 0}
+                source_stats[source]['total'] += 1
+                if item['is_correct']:
+                    source_stats[source]['correct'] += 1
 
-        output_data = {
-            'metadata': metadata,
-            'summary': summary,
-            'source_statistics': {
+            output_data['source_statistics'] = {
                 source: {
                     'total': stats['total'],
                     'correct': stats['correct'],
                     'accuracy': round(stats['correct'] / stats['total'], 4) if stats['total'] > 0 else 0
                 }
                 for source, stats in source_stats.items()
-            },
-            'results': detailed_results
-        }
+            }
 
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(output_data, f, ensure_ascii=False, indent=2)
+            # 파일에 저장
+            with open(self.json_path, 'w', encoding='utf-8') as f:
+                json.dump(output_data, f, ensure_ascii=False, indent=2)
 
-        self.logger.info(f"결과 파일: {json_path}")
+            self.logger.info(f"결과 파일 업데이트: {self.json_path} (총 {len(all_results)}개 결과)")
+        except Exception as e:
+            self.logger.warning(f"결과 파일 통계 업데이트 실패: {e}")
