@@ -23,9 +23,6 @@ from physics_bench.prompts import (
 from physics_bench.utils.config import get_env
 from physics_bench.utils.logging_config import setup_console_logging
 
-# 메인 로거
-logger = logging.getLogger(__name__)
-
 app = typer.Typer()
 
 
@@ -71,6 +68,7 @@ def run(
     # 메인 로그 파일 설정 (전체 실행 로그)
     main_log_file = base_output_dir / f"main_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
     setup_console_logging(log_file=str(main_log_file))
+    logger = logging.getLogger(__name__)
     logger.info(f"메인 로그 파일: {main_log_file}")
 
     multi_loader = UGPhysicsMultiSubjectLoader(Path("dataset") / "ugphysics")
@@ -283,6 +281,10 @@ def ask(
         question: Optional[str] = typer.Option(None, "--question", "-q", help="질문 (미지정 시 입력 요청)"),
 ):
     """한 문제를 입력받아 LLM의 답변을 받습니다."""
+    # 로깅 설정 (콘솔에만 출력)
+    setup_console_logging()
+    logger = logging.getLogger(__name__)
+    
     if provider not in LLMRegistry.get_providers():
         available = ", ".join(LLMRegistry.get_providers())
         raise typer.BadParameter(f"지원하지 않는 provider: {provider}. 사용 가능: {available}")
@@ -367,6 +369,10 @@ def download(
         limit: Optional[int] = typer.Option(None, "--limit", help="다운로드할 항목 수 제한"),
 ):
     """Hugging Face에서 데이터셋을 다운로드하고 JSON으로 저장"""
+    # 로깅 설정 (콘솔에만 출력)
+    setup_console_logging()
+    logger = logging.getLogger(__name__)
+    
     try:
         download_huggingface_dataset(
             dataset_name=dataset_name,

@@ -34,7 +34,7 @@ def _make_llm(spec: ModelSpec) -> BaseLLMClient:
 
 class BenchmarkRunner:
     def __init__(self, model_spec: ModelSpec, prompt_template, verbose: bool = False, log_file: Optional[str] = None,
-                 concurrency: int = 1, solution_prompt_template: Optional[str] = None):
+                 concurrency: int = 8, solution_prompt_template: Optional[str] = None):
         self.model_spec = model_spec
         self.evaluator = PhysicsEvaluator()
         # self.console = Console()  # 주석처리: Console 사용 안함
