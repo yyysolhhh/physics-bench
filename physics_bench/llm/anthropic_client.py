@@ -1,5 +1,6 @@
 from typing import Optional, override
 
+# from anthropic import Anthropic  # 기존 API 키 방식
 from anthropic import Anthropic
 
 from .base import BaseLLMClient
@@ -14,13 +15,23 @@ class AnthropicClient(BaseLLMClient):
             model_name: str,
             temperature: float = 0.0,
             max_tokens: Optional[int] = None,
-            api_key: Optional[str] = None,
+            # project_id: Optional[str] = None,
+            api_key: Optional[str] = None,  # 기존 API 키 방식
     ) -> None:
         key = api_key or get_env("ANTHROPIC_API_KEY")
         if not key:
             raise RuntimeError("ANTHROPIC_API_KEY 가 필요합니다. .env 또는 환경변수로 설정하세요.")
-
         self.client = Anthropic(api_key=key)
+
+        # # AnthropicVertex 방식 (현재 사용 - ADC 사용)
+        # region = get_env("ANTHROPIC_REGION")
+        # project_id = project_id or get_env("ANTHROPIC_PROJECT_ID")
+        # if not project_id:
+        #     raise RuntimeError("ANTHROPIC_PROJECT_ID 가 필요합니다. .env 또는 환경변수로 설정하세요.")
+        #
+        # # Application Default Credentials (ADC) 사용
+        # # gcloud auth application-default login 필요
+        # self.client = AnthropicVertex(region=region, project_id=project_id)
         self.model_name = model_name
         self.temperature = temperature
         self.max_tokens = max_tokens
